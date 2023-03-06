@@ -6,7 +6,7 @@ import numpy as np
 import torch 
 import torch.nn as nn
 from random import randrange
-from tcn_model import TcnGcnNet
+from tcn_model_orii import TcnGcnNet
 from my_dataset import RawFeatureDataset
 from config import args
 import copy

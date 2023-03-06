@@ -11,11 +11,6 @@ from dgl import DGLGraph
 import numpy as np
 import torch.nn.functional as F
 
-from models.encoder import Encoder, EncoderLayer, ConvLayer, EncoderStack
-from models.attn import FullAttention, ProbAttention, AttentionLayer
-from models.embed import DataEmbedding
-
-
 import time
 
 # This module should be tested carefully
@@ -302,37 +297,6 @@ class TcnGcnNet(nn.Module):
         self.fc = nn.Linear(self.hidden_state * 3, class_num)
         nn.init.xavier_uniform_(self.fc.weight)
 
-        d_model = 512
-        attn = 'full'
-        factor = 5
-        n_heads = 8
-        dropout = 0.0
-        d_ff = 512
-        activation = 'gelu'
-        e_layers = 5
-        distil = None
-        embed = 'fixed'
-        self.enc_embedding = DataEmbedding(512, d_model, embed, dropout)
-        Attn = ProbAttention if attn == 'prob' else FullAttention
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
-                                   d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-            [
-                ConvLayer(
-                    d_model
-                ) for l in range(e_layers - 1)
-            ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        self.new_fc = torch.nn.Linear(512, 5)
     def forward(self, x_vision, x_kinematics, return_emb=False):
         x_left = x_kinematics[:, :, :7]
         x_right = x_kinematics[:, :, 7:]
@@ -348,12 +312,23 @@ class TcnGcnNet(nn.Module):
         x_right = (x_right_t + x_right_l) / 2
         # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
 
-        x_fu = torch.cat((x_left, x_right, x_vision), dim=2)
-        x_fu = self.enc_embedding(x_fu)
-        x_fu, attns = self.encoder(x_fu, attn_mask=None)
-        out = self.projection(x_fu)
+        img_node = x_vision.permute(1, 0, 2)
+        left_node = x_left.permute(1, 0, 2)
+        right_node = x_right.permute(1, 0, 2)
+
+        graph_infeats = torch.cat([img_node, left_node, right_node], dim=1)
+
+        graph_ofeats = self.gnn(graph_infeats)
+
+        graph_ofeats = graph_ofeats.view(-1, 3 * self.hidden_state)
+
+        # graph_ofeats = F.dropout(graph_ofeats, p=0.2)
+
+        # graph_ofeats [video_len,64*3]
+        # out [video_len,num_class]
+        out = self.fc(graph_ofeats)
 
         if return_emb:
-            return out, 0
+            return out, graph_infeats.view(-1, 3 * self.hidden_state)
         else:
             return out
