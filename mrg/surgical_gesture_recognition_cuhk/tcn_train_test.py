@@ -6,7 +6,7 @@ import numpy as np
 import torch 
 import torch.nn as nn
 from random import randrange
-from tcn_model_orii import TcnGcnNet
+from tcn_model import TcnGcnNet
 from my_dataset import RawFeatureDataset
 from config import args
 import copy
@@ -14,7 +14,9 @@ import copy
 from logger import Logger
 import utils
 import pdb
-
+import torch.optim.lr_scheduler as lr_scheduler
+from module_box.edit_score_dist import calculate_edit_score
+from module_box.edit_score_dist import flatten_list
 from config import (raw_feature_dir, sample_rate, graph_dir,
                     gesture_class_num, dataset_name)
 
@@ -47,6 +49,7 @@ def train_model(model,
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=weight_decay)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=2)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.005,
     #                             momentum=0.9, weight_decay=1e-4)
 
@@ -118,6 +121,14 @@ def train_model(model,
 
             val_result = test_model(model, val_dataset, loss_weights)
             v_accuracy, v_edit_score, v_loss, v_f_scores = val_result
+
+
+            lr_prev = optimizer.param_groups[0]['lr']
+            scheduler.step(v_loss)
+            lr = optimizer.param_groups[0]['lr']
+            if lr != lr_prev:
+                print('Updating learning rate to {}'.format(lr))
+            print('val_accuracy:{}, edit_score:{}, val_loss:{}'.format(v_accuracy,v_edit_score,v_loss))
 
             logger.scalar_summary('t_accuracy', t_accuracy, epoch)
             logger.scalar_summary('t_edit_score', t_edit_score, epoch)
@@ -207,6 +218,20 @@ def test_model(model, test_dataset, loss_weights=None, plot_naming=None):
     avg_loss = total_loss / len(test_loader.dataset)
     edit_score = utils.get_edit_score_colin(preditions, gts,
                                             bg_class=bg_class)
+
+    # es = 0
+    # ed = 0
+    # es_l = []
+    # for i in range(len(preditions)):
+    #     edit_distance, edit_score_h = calculate_edit_score(preditions[i], gts[i])
+    #     es_l.append(es)
+    #     es+=edit_score_h
+    #     ed+=edit_distance
+    # #print(es_l)
+    # ed = ed/len(preditions)
+    # es = es/len((preditions))
+
+    #print(edit_score, es, ed, len(flatten_list(preditions)))
     accuracy = utils.get_accuracy_colin(preditions, gts)
     #accuracy = utils.get_accuracy(preditions, gts)
     

@@ -411,12 +411,14 @@ def segment_intervals(Yi):
 
 def get_edit_score_colin(P, Y, norm=True, bg_class=None, **kwargs):
     if type(P) == list:
-        tmp = [get_edit_score_colin(P[i], Y[i], norm, bg_class)
-                 for i in range(len(P))]
+        tmp = [get_edit_score_colin(P[i], Y[i], norm, bg_class) for i in range(len(P))]
+        #print(tmp)
         return np.mean(tmp)
     else:
-        P_ = segment_labels(P)
-        Y_ = segment_labels(Y)
+        #P_ = segment_labels(P)
+        #Y_ = segment_labels(Y)
+        P_ = P
+        Y_ = Y
         if bg_class is not None:
             P_ = [c for c in P_ if c!=bg_class]
             Y_ = [c for c in Y_ if c!=bg_class]

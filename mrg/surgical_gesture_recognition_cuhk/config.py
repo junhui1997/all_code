@@ -54,4 +54,3 @@ parser.add_argument('--split', type=int, required=True,
 parser.add_argument('--save_name', type=str, required=True,
                     help="save name.")
 args = parser.parse_args()
-#tcn_params['train_params'] = None
