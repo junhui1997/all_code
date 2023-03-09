@@ -10,7 +10,7 @@ class cnn_feature(nn.Module):
     def __init__(self):
         super().__init__()
         # 需要用resnet50的话直接改成50jike
-        self.resnet = timm.create_model('resnet18', pretrained=True)
+        self.resnet = timm.create_model('resnet50', pretrained=True)
         #self.resnet = torchvision.models.resnet18(pretrained = True)
         self.resnet.eval()
         self.resnet_list = list(self.resnet.children())

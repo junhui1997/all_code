@@ -4,8 +4,8 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from surgical_gesture_recognition_mydataset.new_utils.masking import TriangularCausalMask, ProbMask
 from math import sqrt
-from surgical_gesture_recognition_cuhk.utilss.masking import TriangularCausalMask, ProbMask
 
 """
     scale在full attention时候是None,scale是不同的针对qk值得缩放比例，如果没有的话就使用默认的

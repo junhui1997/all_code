@@ -15,7 +15,7 @@ from models.encoder import Encoder, EncoderLayer, ConvLayer
 from models.encoder import Encoder as att_Encoder
 from models.attn import FullAttention, ProbAttention, AttentionLayer
 from models.embed import DataEmbedding
-from module_box.feature_extraction import cnn_feature
+from module_box.feature_extraction import cnn_feature, cnn_feature50
 from module_box.token_learner import token_learner
 
 import time
@@ -32,7 +32,7 @@ class TcnGcnNet(nn.Module):
         super(TcnGcnNet, self).__init__()
 
         self.s = 8
-        self.cnn_feature = cnn_feature()
+        self.cnn_feature = cnn_feature50()
         self.token_learner = token_learner(S=self.s)
 
         d_model = 512

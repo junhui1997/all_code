@@ -9,7 +9,7 @@ import os
 
 import torch
 from PIL import Image
-from surgical_gesture_recognition_mydataset.module_box.transform_list import transform_train,transform_test
+from module_box.transform_list import transform_train,transform_test
 import warnings
 warnings.filterwarnings('ignore')
 from utils import rotationMatrixToEulerAngles

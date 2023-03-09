@@ -25,3 +25,25 @@ class cnn_feature(nn.Module):
         return x
 
 
+class cnn_feature50(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # 需要用resnet50的话直接改成50jike
+        self.resnet = timm.create_model('resnet50', pretrained=True)
+        #self.resnet = torchvision.models.resnet18(pretrained = True)
+        self.resnet.eval()
+        self.resnet_list = list(self.resnet.children())
+        self.res_fc = nn.Linear(2048, 512)
+        # dprint('len of resnet',len(self.resnet_list))
+
+    def forward(self, x):
+        # 取resnet结果作为下一层的输入,倒数第二层那里很奇怪，我就直接给flatten了
+        with torch.no_grad():
+            for i in range(len(self.resnet_list) - 2):
+                x = self.resnet_list[i](x)
+                # dprint(i,x.shape)
+        x = x.permute(0, 3, 2, 1)
+        x = self.res_fc(x)
+        x = x.permute(0, 3, 2, 1)
+        return x
+
