@@ -7,6 +7,7 @@ import numpy as np
 import scipy.io
 import os
 
+import torch
 from PIL import Image
 from surgical_gesture_recognition_mydataset.module_box.transform_list import transform_train,transform_test
 import warnings
@@ -65,7 +66,8 @@ class RawFeatureDataset(Dataset):
 
             assert trail_len == trail_kinematics.shape[0]
 
-            self.all_feature.append(trail_feature)
+            # 注意他切图片是从1开始的
+            self.all_feature.append(np.array(['{}'.format(trail_name) for i in range(trail_len)]))
             self.all_gesture.append(trail_gesture)
             self.all_kinematics.append(trail_kinematics)
 
@@ -73,29 +75,23 @@ class RawFeatureDataset(Dataset):
             start_index += trail_len
 
         self.all_feature = np.concatenate(self.all_feature)
+        self.all_feature = self.all_feature.reshape(-1, 1)
         self.all_gesture = np.concatenate(self.all_gesture)
         self.all_kinematics = np.concatenate(self.all_kinematics)
 
         # Normalization
         if normalization is not None:
-            self.feature_means = normalization[0][0]
-            self.feature_stds = normalization[1][0]
             self.kinematics_means = normalization[0][1]
             self.kinematics_stds = normalization[1][1]
 
-            self.all_feature = self.all_feature - self.feature_means
-            self.all_feature = self.all_feature / self.feature_stds
             self.all_kinematics = self.all_kinematics - self.kinematics_means
             self.all_kinematics = self.all_kinematics / self.kinematics_stds
 
         else:
-            self.feature_means = self.all_feature.mean(0)
-            self.feature_stds = self.all_feature.std(0)
+
             self.kinematics_means = self.all_kinematics.mean(0)
             self.kinematics_stds = self.all_kinematics.std(0)
 
-            self.all_feature = self.all_feature - self.feature_means
-            self.all_feature = self.all_feature / self.feature_stds
             self.all_kinematics = self.all_kinematics - self.kinematics_means
             self.all_kinematics = self.all_kinematics / self.kinematics_stds
 
@@ -140,28 +136,35 @@ class RawFeatureDataset(Dataset):
         mask = np.zeros([padded_len, 1])
         mask[0:trail_len] = 1
 
-        padded_feature = np.zeros([padded_len, feature.shape[1]])
-        padded_feature[0:trail_len] = feature
-
-        padded_kinematics = np.zeros([padded_len, kinematics.shape[1]])
-        padded_kinematics[0:trail_len] = kinematics
-
-        padded_gesture = np.zeros([padded_len, 1])-1
-        padded_gesture[0:trail_len] = gesture
+        img_path = '../../cuhk_dataset/CUHK SITE/image/'
+        video_name = '{}/'.format(feature[0][0])
+        imgs = None
+        for i in range(trail_len):
+            file_name = "{}{}{}.png".format(img_path, video_name, i+1)
+            img = np.array(Image.open(file_name))
+            img = img / 255
+            img = transform_train(img)
+            img.permute(2, 0, 1)
+            img = img.to(torch.float)
+            img = img.unsqueeze(0)
+            if imgs is None:
+                imgs = img
+            else:
+                imgs = torch.cat((imgs, img), dim=0)
 
         # padded_feature这样相当于是将形状扩充了一下，扩充的部分为0，其余部分和原有的feature一致
-        return {'feature': padded_feature,
-                'gesture': padded_gesture,
-                'kinematics': padded_kinematics,
+        return {'feature': imgs,
+                'gesture': gesture,
+                'kinematics': kinematics,
                 'mask': mask,
                 'name': trail_name,
                 'trail_len':trail_len}
 
     def get_means(self):
-        return [self.feature_means, self.kinematics_means]
+        return [0, self.kinematics_means]
 
     def get_stds(self):
-        return [self.feature_stds, self.kinematics_stds]
+        return [0, self.kinematics_stds]
 
     def _load_kinematics(self, video_id, _count):
         print("Preloading kinematics from video {}...".format(video_id))

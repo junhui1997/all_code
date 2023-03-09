@@ -63,7 +63,7 @@ def train_model(model,
         batch_loss = 0.0
         for i, data in enumerate(train_loader):
             # [batch_size,padded_video_len, dim] for video dim = 128 for kine dim = 14
-            feature = data['feature'].float()
+            feature = data['feature']
             feature = feature.cuda()
 
             gesture = data['gesture'].long()

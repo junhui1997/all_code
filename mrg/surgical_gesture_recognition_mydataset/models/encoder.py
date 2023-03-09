@@ -6,13 +6,15 @@ import torch.nn.functional as F
     卷积操作同样执行了一个conv,norm，activation
     input:[batch_size,seq_len,d_model]
     return:[batch_size,seq_len/2,d_model]
+    默认factor为2，所以每次缩减为原始长度的factor分之一
 """
 class ConvLayer(nn.Module):
-    def __init__(self, c_in):
+    def __init__(self, c_in, factor=2):
         super(ConvLayer, self).__init__()
         # 这里应该是由于api版本的不同，想要维持卷积完后的形状不同需要进行的操作
         padding = 1 if torch.__version__>='1.5.0' else 2
         # 保持channel的维度不变,此时的cin是d_model
+        # 在这里因为kernel_size是3，所以会导致总长度减少2，所以此时在这里左右各需要补上1，也就是padding
         self.downConv = nn.Conv1d(in_channels=c_in,
                                   out_channels=c_in,
                                   kernel_size=3,
@@ -22,7 +24,7 @@ class ConvLayer(nn.Module):
         # 和relu有细微差别
         self.activation = nn.ELU()
         # kernel_size 3和padding = 1抵消掉了，剩下是stride=2导致经过这一步之后尺寸减半
-        self.maxPool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
+        self.maxPool = nn.MaxPool1d(kernel_size=3, stride=factor, padding=1)
 
     def forward(self, x):
         # 这一步同样是为了对d_model进行卷积
