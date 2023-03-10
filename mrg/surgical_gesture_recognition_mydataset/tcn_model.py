@@ -31,8 +31,10 @@ class TcnGcnNet(nn.Module):
 
         super(TcnGcnNet, self).__init__()
 
-        self.s = 8
-        self.cnn_feature = cnn_feature50()
+        self.expand_f = 3
+        self.s = 2**self.expand_f
+        #self.cnn_feature = cnn_feature50()
+        self.cnn_feature = cnn_feature()
         self.token_learner = token_learner(S=self.s)
 
         d_model = 512
@@ -42,8 +44,8 @@ class TcnGcnNet(nn.Module):
         dropout = 0.0
         d_ff = 512
         activation = 'gelu'
-        e_layers = 10
-        distil = None
+        e_layers = 4
+        distil = True
         embed = 'fixed'
         # 192 是最后一个维度，也就是dim
         self.enc_embedding = DataEmbedding(512, d_model, embed, dropout)
@@ -66,9 +68,23 @@ class TcnGcnNet(nn.Module):
             ] if distil else None,
             norm_layer=torch.nn.LayerNorm(d_model)
         )
+        e_layers = 3
+        self.encoder_vision_nodistil = att_Encoder(
+            [
+                EncoderLayer(
+                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
+                                   d_model, n_heads, mix=False),
+                    d_model,
+                    d_ff,
+                    dropout=dropout,
+                    activation=activation
+                ) for l in range(e_layers)
+            ],
+            norm_layer=torch.nn.LayerNorm(d_model)
+        )
 
-        attn = 'full'
-        e_layers = 5
+        attn = 'prob'
+        e_layers = 10
         self.kine_enc_embedding = DataEmbedding(14, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
         self.kine_encoder = att_Encoder(
@@ -82,65 +98,76 @@ class TcnGcnNet(nn.Module):
                     activation=activation
                 ) for l in range(e_layers)
             ],
-            [
-                ConvLayer(
-                    d_model
-                ) for l in range(e_layers - 1)
-            ] if distil else None,
             norm_layer=torch.nn.LayerNorm(d_model)
         )
         # 512是d_model,128是左右两边的128,5是num_classes
-        self.vision_conv = ConvLayer(d_model, self.s)
+        self.vision_conv = nn.Sequential(OrderedDict([
+            ('reduce_seq_{}'.format(i+1), ConvLayer(d_model)) for i in range(self.expand_f)
+        ]))
         self.vision_fc = torch.nn.Linear(512, 256)
         self.kine_fc = torch.nn.Linear(512, 256)
         self.new_fc = torch.nn.Linear(512, 5)
 
-
-    #forward only change kinetic embedding
     def forward(self, x_vision, x_kinematics, return_emb=False):
-        x_kine = self.kine_enc_embedding(x_kinematics)
-        x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
 
-        batch_size, seq_len, _, _, _ = x_vision.shape
-        # !!!!!非继承的tensor切记要移动到cuda中去
-        x_visions = torch.Tensor(batch_size, seq_len * self.s, 512).cuda()
-        for i in range(seq_len):
-            # x_feature在token learner之后是[batch_size,self.s,512]
-            x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
-            x_vision_single = self.token_learner(x_vision_single)
-            x_visions[:, i * self.s:(i + 1) * self.s, :] = x_vision_single
-        x_visions = self.vision_conv(x_visions)
-        # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+         batch_size, seq_len, _, _, _ = x_vision.shape
+         # !!!!!非继承的tensor切记要移动到cuda中去
+         x_visions = torch.Tensor(batch_size, seq_len * self.s, 512).cuda()
+         for i in range(seq_len):
+             # x_feature在token learner之后是[batch_size,self.s,512]
+             x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
+             x_vision_single = self.token_learner(x_vision_single)
+             x_visions[:, i * self.s:(i + 1) * self.s, :] = x_vision_single
+         #x_visions = self.vision_conv(x_visions)
+         # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
 
-        x_kine = self.kine_fc(x_kine)
-        x_visions = self.vision_fc(x_visions)
-        x_fu = torch.cat((x_kine, x_visions), dim=2)
-        x_fu = self.enc_embedding(x_fu)
-        x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
-        out = self.new_fc(x_fu)
+         x_fu = x_visions
+         x_fu = self.enc_embedding(x_fu)
+         x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+         out = self.new_fc(x_fu)
 
-        if return_emb:
-            return out, 0
-        else:
-            return out
+         if return_emb:
+             return out, 0
+         else:
+             return out
 
-    #forward only change final graph network
-   # def forward(self, x_vision, x_kinematics, return_emb=False):
-   #      x_left = x_kinematics[:, :, :7]
-   #      x_right = x_kinematics[:, :, 7:]
+
+    # #forward only use kinedata
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #     x_kine = self.kine_enc_embedding(x_kinematics)
+    #     x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+    #
+    #
+    #     x_fu = x_kine
+    #     x_fu = self.enc_embedding(x_fu)
+    #     x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+    #     out = self.new_fc(x_fu)
+    #
+    #     if return_emb:
+    #         return out, 0
+    #     else:
+    #         return out
+
+
+   # forword with vision
+   #  def forward(self, x_vision, x_kinematics, return_emb=False):
+   #      x_kine = self.kine_enc_embedding(x_kinematics)
+   #      x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
    #
-   #      x_vision = self.tcn_vision(x_vision)
-   #      x_left_t = self.tcn_left(x_left)
-   #      x_right_t = self.tcn_right(x_right)
-   #
-   #      x_left_l, _ = self.lstm_left(x_left)
-   #      x_right_l, _ = self.lstm_right(x_right)
-   #
-   #      x_left = (x_left_t + x_left_l) / 2
-   #      x_right = (x_right_t + x_right_l) / 2
+   #      batch_size, seq_len, _, _, _ = x_vision.shape
+   #      # !!!!!非继承的tensor切记要移动到cuda中去
+   #      x_visions = torch.Tensor(batch_size, seq_len * self.s, 512).cuda()
+   #      for i in range(seq_len):
+   #          # x_feature在token learner之后是[batch_size,self.s,512]
+   #          x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
+   #          x_vision_single = self.token_learner(x_vision_single)
+   #          x_visions[:, i * self.s:(i + 1) * self.s, :] = x_vision_single
+   #      x_visions = self.vision_conv(x_visions)
    #      # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
    #
-   #      x_fu = torch.cat((x_left, x_right, x_vision), dim=2)
+   #      x_kine = self.kine_fc(x_kine)
+   #      x_visions = self.vision_fc(x_visions)
+   #      x_fu = torch.cat((x_kine, x_visions), dim=2)
    #      x_fu = self.enc_embedding(x_fu)
    #      x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
    #      out = self.new_fc(x_fu)
@@ -149,3 +176,4 @@ class TcnGcnNet(nn.Module):
    #          return out, 0
    #      else:
    #          return out
+

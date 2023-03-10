@@ -151,6 +151,7 @@ class RawFeatureDataset(Dataset):
                 imgs = img
             else:
                 imgs = torch.cat((imgs, img), dim=0)
+        #imgs = torch.rand(1,1,1)
 
         # padded_feature这样相当于是将形状扩充了一下，扩充的部分为0，其余部分和原有的feature一致
         return {'feature': imgs,

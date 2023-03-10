@@ -49,7 +49,7 @@ def train_model(model,
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=weight_decay)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.8, patience=1)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.8, patience=100)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.005,
     #                             momentum=0.9, weight_decay=1e-4)
 
