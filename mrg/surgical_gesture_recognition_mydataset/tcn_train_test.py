@@ -277,7 +277,7 @@ def cross_validate(model_params, train_params, naming):
         model = TcnGcnNet(**model_params)
         model = model.cuda()
 
-        print(model)
+        #print(model)
 
         n_layers = len(model_params['encoder_params']['layer_sizes'])
 

@@ -33,8 +33,8 @@ class TcnGcnNet(nn.Module):
 
         self.expand_f = 3
         self.s = 2**self.expand_f
-        #self.cnn_feature = cnn_feature50()
-        self.cnn_feature = cnn_feature('linear')
+        self.cnn_feature = cnn_feature50('linear')
+        #self.cnn_feature = cnn_feature('linear')
         self.token_learner = token_learner(S=self.s)
 
         d_model = 512
@@ -48,7 +48,7 @@ class TcnGcnNet(nn.Module):
         distil = True
         embed = 'fixed'
         # 192 是最后一个维度，也就是dim
-        self.enc_embedding = DataEmbedding(512, d_model, embed, dropout)
+        self.enc_embedding = DataEmbedding(1000, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
         self.encoder_vision_nodistil = att_Encoder(
             [
@@ -70,19 +70,20 @@ class TcnGcnNet(nn.Module):
         self.vision_fc = torch.nn.Linear(1000, 512)
         self.kine_fc = torch.nn.Linear(512, 256)
         self.new_fc = torch.nn.Linear(512, 5)
+        a = 0
 
     def forward(self, x_vision, x_kinematics, return_emb=False):
 
          batch_size, seq_len, _, _, _ = x_vision.shape
          # !!!!!非继承的tensor切记要移动到cuda中去
-         x_visions = torch.Tensor(batch_size, seq_len, 512).cuda()
+         x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
          for i in range(seq_len):
              # x_feature在token learner之后是[batch_size,self.s,512]
              x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
-             x_vision_single = self.vision_fc(x_vision_single)
              x_visions[:, i, :] = x_vision_single
          #x_visions = self.vision_conv(x_visions)
          # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+
 
          x_fu = x_visions
          x_fu = self.enc_embedding(x_fu)
