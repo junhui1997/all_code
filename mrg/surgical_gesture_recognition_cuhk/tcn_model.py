@@ -317,7 +317,7 @@ class TcnGcnNet(nn.Module):
         distil = None
         embed = 'fixed'
         # 192 是最后一个维度，也就是dim
-        self.enc_embedding = DataEmbedding(192, d_model, embed, dropout)
+        self.enc_embedding = DataEmbedding(64, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
         self.encoder_all = att_Encoder(
             [
@@ -364,8 +364,9 @@ class TcnGcnNet(nn.Module):
         self.kine_fc = torch.nn.Linear(512, 128)
         self.new_fc = torch.nn.Linear(512, 5)
 
+        # forward only change kinetic embedding
 
-    #forward only change kinetic embedding
+    # 只使用vision信息
     def forward(self, x_vision, x_kinematics, return_emb=False):
         x_kine = self.kine_enc_embedding(x_kinematics)
         x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
@@ -373,7 +374,7 @@ class TcnGcnNet(nn.Module):
         x_vision = self.tcn_vision(x_vision)
         # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
 
-        x_fu = torch.cat((x_kine, x_vision), dim=2)
+        x_fu = x_vision
         x_fu = self.enc_embedding(x_fu)
         x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
         out = self.new_fc(x_fu)
@@ -382,6 +383,24 @@ class TcnGcnNet(nn.Module):
             return out, 0
         else:
             return out
+
+    # #forward only change kinetic embedding
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #     x_kine = self.kine_enc_embedding(x_kinematics)
+    #     x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+    #     x_kine = self.kine_fc(x_kine)
+    #     x_vision = self.tcn_vision(x_vision)
+    #     # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+    #
+    #     x_fu = torch.cat((x_kine, x_vision), dim=2)
+    #     x_fu = self.enc_embedding(x_fu)
+    #     x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+    #     out = self.new_fc(x_fu)
+    #
+    #     if return_emb:
+    #         return out, 0
+    #     else:
+    #         return out
 
     #forward only change final graph network
    # def forward(self, x_vision, x_kinematics, return_emb=False):

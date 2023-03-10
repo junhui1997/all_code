@@ -49,7 +49,7 @@ def train_model(model,
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=weight_decay)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=2)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.9, patience=200)
     # optimizer = torch.optim.SGD(model.parameters(), lr=0.005,
     #                             momentum=0.9, weight_decay=1e-4)
 
@@ -128,6 +128,7 @@ def train_model(model,
             lr = optimizer.param_groups[0]['lr']
             if lr != lr_prev:
                 print('Updating learning rate to {}'.format(lr))
+            print('train_accuracy:{}, edit_score:{}, train_loss:{}'.format(t_accuracy, t_edit_score, t_loss))
             print('val_accuracy:{}, edit_score:{}, val_loss:{}'.format(v_accuracy,v_edit_score,v_loss))
 
             logger.scalar_summary('t_accuracy', t_accuracy, epoch)
