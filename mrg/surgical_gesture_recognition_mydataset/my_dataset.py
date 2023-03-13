@@ -20,7 +20,7 @@ class RawFeatureDataset(Dataset):
     def __init__(self, dataset_name,
                  feature_dir, trail_list,
                  encode_level, sample_rate=1, sample_aug=True,
-                 normalization=None):
+                 normalization=None, flag='train'):
         super(RawFeatureDataset, self).__init__()
 
         # 所有video的名称
@@ -33,6 +33,7 @@ class RawFeatureDataset(Dataset):
         from config import kinematics_dir, transcriptions_dir
         self.kinematics_dir = kinematics_dir
         self.transcriptions_dir = transcriptions_dir
+        self.flag = flag
 
         self.sample_rate = sample_rate
         self.sample_aug = sample_aug
@@ -143,7 +144,10 @@ class RawFeatureDataset(Dataset):
             file_name = "{}{}{}.png".format(img_path, video_name, i+1)
             img = np.array(Image.open(file_name))
             img = img / 255
-            img = transform_train(img)
+            if self.flag == 'train':
+                img = transform_train(img)
+            elif self.flag == 'test':
+                img = transform_test(img)
             img.permute(2, 0, 1)
             img = img.to(torch.float)
             img = img.unsqueeze(0)
