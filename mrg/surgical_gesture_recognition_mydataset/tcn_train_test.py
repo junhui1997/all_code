@@ -288,7 +288,7 @@ def cross_validate(model_params, train_params, naming):
                                           encode_level=n_layers,
                                           sample_rate=sample_rate,
                                           sample_aug=False,
-                                          normalization=None)
+                                          normalization=None, flag='train')
 
         test_norm = [train_dataset.get_means(), train_dataset.get_stds()]
         test_dataset = RawFeatureDataset(dataset_name, 
@@ -297,7 +297,7 @@ def cross_validate(model_params, train_params, naming):
                                          encode_level=n_layers,
                                          sample_rate=sample_rate,
                                          sample_aug=False,
-                                         normalization=test_norm)
+                                         normalization=test_norm, flag='test')
 
         loss_weights = utils.get_class_weights(train_dataset)
         #loss_weights = None

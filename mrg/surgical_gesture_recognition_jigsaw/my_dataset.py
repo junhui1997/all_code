@@ -20,11 +20,12 @@ from utils import rotationMatrixToEulerAngles
 # For TCN: raw feature
 class RawFeatureDataset(Dataset):
     def __init__(self, dataset_name, trail_list, args,
-                 normalization=None , enc = None):
+                 normalization=None , enc = None, flag='train'):
         super(RawFeatureDataset, self).__init__()
 
         # 所有video的名称
         self.trail_list = trail_list
+        self.flag = flag
         # 对于每个file都单独计算不同的sample
         # 先读取文件，直接所有的东西都放进init里面，不再分prepare data了
         folder = '../../../jigsaw/'
@@ -105,7 +106,10 @@ class RawFeatureDataset(Dataset):
                                                           int(df_item.iloc[i]['frame']))
                 img = np.array(Image.open('{}/{}.jpg'.format(self.image_floder, file_name)))
                 img = img / 255
-                img = transform_train(img)
+                if self.flag == 'train':
+                    img = transform_train(img)
+                else:
+                    img = transform_test(img)
                 img.permute(2, 0, 1)
                 img = img.to(torch.float)
                 img = img.unsqueeze(0)

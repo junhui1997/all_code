@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from torch.utils.data import Dataset
 import numpy as np
-from transform_list import transform_train
+from transform_list import transform_train, transform_test
 import scipy.io
 import os
 
@@ -34,7 +34,9 @@ class RawFeatureDataset(Dataset):
             df = pd.read_pickle(folder + 'Suturing.pkl')
             self.image_floder = '../../../jigsaw/video_slice/Suturing/'
 
-
+        # 获取所有file的名字，并去除txt
+        self.trail_list = list(df['file_name'].unique())
+        self.trail_list = [trail.split('.')[0] for trail in self.trail_list]
         self.df = df
         self.args = args
 
@@ -50,41 +52,24 @@ class RawFeatureDataset(Dataset):
         df_item = self.df.loc[(self.df['file_name'] == (trail+'.txt'))]
         trail_len = len(df_item)
         imgs = None
-        if self.args.model_type == 'kine':
-            imgs = torch.rand(1,1,1)
-        else:
-            for i in range(trail_len):
-                file_name = "{}_capture1_frame_{}".format(trail,
-                                                          int(df_item.iloc[i]['frame']))
-                img = np.array(Image.open('{}/{}.jpg'.format(self.image_floder, file_name)))
-                img = img / 255
-                img = transform_train(img)
-                img.permute(2, 0, 1)
-                img = img.to(torch.float)
-                img = img.unsqueeze(0)
-                if imgs is None:
-                    imgs = img
-                else:
-                    imgs = torch.cat((imgs, img), dim=0)
-        #imgs = torch.rand(1,1,1)
-        kinematics = df_item.iloc[:, 11:11 + self.args.enc_in].to_numpy().astype('float64')
-        gesture = self.enc.transform(df_item['gesture'])
-        gesture = torch.tensor(gesture).to(torch.long)
+        for i in range(trail_len):
+            file_name = "{}_capture1_frame_{}".format(trail,
+                                                      int(df_item.iloc[i]['frame']))
+            img = np.array(Image.open('{}/{}.jpg'.format(self.image_floder, file_name)))
+            img = img / 255
+            img = transform_test(img)
+            img.permute(2, 0, 1)
+            img = img.to(torch.float)
+            img = img.unsqueeze(0)
+            if imgs is None:
+                imgs = img
+            else:
+                imgs = torch.cat((imgs, img), dim=0)
+
+
         # padded_feature这样相当于是将形状扩充了一下，扩充的部分为0，其余部分和原有的feature一致
         return {'feature': imgs,
-                'gesture': gesture,
-                'kinematics': kinematics,
-                'trail_len':trail_len}
+                'trail': trail,
+                }
 
-    def get_means(self):
-        return [0, self.kinematics_means]
-
-    def get_stds(self):
-        return [0, self.kinematics_stds]
-
-    def get_enc(self):
-        return self.enc
-
-    def get_class_name(self):
-        return self.class_name
 

@@ -296,7 +296,8 @@ def cross_validate(model_params, train_params, naming, args):
                                          test_trail_list,
                                          args,
                                          normalization=test_norm,
-                                         enc=test_enc)
+                                         enc=test_enc, flag='test')
+        a=11
 
 
         loss_weights = utils.get_class_weights(train_dataset)
