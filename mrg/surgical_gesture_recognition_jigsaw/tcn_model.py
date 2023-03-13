@@ -45,7 +45,7 @@ class TcnGcnNet(nn.Module):
         dropout = 0.0
         d_ff = 512
         activation = 'gelu'
-        e_layers_all = 4
+        e_layers_all = 8
         distil = False
         embed = 'fixed'
         # 192 是最后一个维度，也就是dim
@@ -150,8 +150,19 @@ class TcnGcnNet(nn.Module):
             x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
             out = self.new_fc(x_fu)
         elif args.model_type == 'vision':
-            pass
-
+            batch_size, seq_len, _, _, _ = x_vision.shape
+            # !!!!!非继承的tensor切记要移动到cuda中去
+            x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
+            for i in range(seq_len):
+                # x_feature在token learner之后是[batch_size,self.s,512]
+                x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
+                x_visions[:, i, :] = x_vision_single
+            x_visions = self.vision_embedding(x_visions)
+            x_visions, attns = self.encoder_vision_nodistil(x_visions)
+            x_fu = x_visions
+            x_fu = self.enc_embedding(x_fu)
+            x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+            out = self.new_fc(x_fu)
 
 
         if return_emb:

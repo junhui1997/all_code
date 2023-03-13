@@ -45,6 +45,7 @@ class RawFeatureDataset(Dataset):
             df_n = df_n.loc[(df['gesture'] != 'None')]
             # to ensure the seq len does not exceed limit
             sample_rate = len(df_n)//args.seq_limit + 1
+            #sample_rate = 2
             df_n = df_n[::sample_rate]
             if sampled_df is None:
                 sampled_df = df_n
