@@ -96,19 +96,22 @@ class RawFeatureDataset(Dataset):
         df_item = self.df.loc[(self.df['file_name'] == (trail+'.txt'))]
         trail_len = len(df_item)
         imgs = None
-        for i in range(trail_len):
-            file_name = "{}_capture1_frame_{}".format(trail,
-                                                      int(df_item.iloc[i]['frame']))
-            img = np.array(Image.open('{}/{}.jpg'.format(self.image_floder, file_name)))
-            img = img / 255
-            img = transform_train(img)
-            img.permute(2, 0, 1)
-            img = img.to(torch.float)
-            img = img.unsqueeze(0)
-            if imgs is None:
-                imgs = img
-            else:
-                imgs = torch.cat((imgs, img), dim=0)
+        if self.args.model_type == 'kine':
+            imgs = torch.rand(1,1,1)
+        else:
+            for i in range(trail_len):
+                file_name = "{}_capture1_frame_{}".format(trail,
+                                                          int(df_item.iloc[i]['frame']))
+                img = np.array(Image.open('{}/{}.jpg'.format(self.image_floder, file_name)))
+                img = img / 255
+                img = transform_train(img)
+                img.permute(2, 0, 1)
+                img = img.to(torch.float)
+                img = img.unsqueeze(0)
+                if imgs is None:
+                    imgs = img
+                else:
+                    imgs = torch.cat((imgs, img), dim=0)
         #imgs = torch.rand(1,1,1)
         kinematics = df_item.iloc[:, 11:11 + self.args.enc_in].to_numpy().astype('float64')
         gesture = self.enc.transform(df_item['gesture'])

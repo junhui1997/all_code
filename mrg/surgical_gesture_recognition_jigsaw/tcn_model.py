@@ -49,7 +49,11 @@ class TcnGcnNet(nn.Module):
         distil = False
         embed = 'fixed'
         # 192 是最后一个维度，也就是dim
-        self.enc_embedding = DataEmbedding(1024, d_model, embed, dropout)
+        if args.model_type == 'hybrid':
+            enc_dim = 1024
+        else:
+            enc_dim = 512
+        self.enc_embedding = DataEmbedding(enc_dim, d_model, embed, dropout)
         self.vision_embedding = DataEmbedding(1000, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
         self.encoder_all = att_Encoder(
@@ -113,24 +117,42 @@ class TcnGcnNet(nn.Module):
         self.new_fc = torch.nn.Linear(512, args.num_classes)
 
     def forward(self, x_vision, x_kinematics, return_emb=False):
-        x_kine = self.kine_enc_embedding(x_kinematics)
-        x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
-        batch_size, seq_len, _, _, _ = x_vision.shape
-        # !!!!!非继承的tensor切记要移动到cuda中去
-        x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
-        for i in range(seq_len):
-            # x_feature在token learner之后是[batch_size,self.s,512]
-            x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
-            x_visions[:, i, :] = x_vision_single
-        # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
 
-        x_visions = self.vision_embedding(x_visions)
-        x_visions, attns = self.encoder_vision_nodistil(x_visions)
 
-        x_fu = torch.cat((x_kine, x_visions), dim=2)
-        x_fu = self.enc_embedding(x_fu)
-        x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
-        out = self.new_fc(x_fu)
+        if args.model_type == 'kine':
+            # kinetic part
+            x_kine = self.kine_enc_embedding(x_kinematics)
+            x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+
+            x_fu = x_kine
+            x_fu = self.enc_embedding(x_fu)
+            x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+            out = self.new_fc(x_fu)
+
+
+        elif args.model_type == 'hybrid':
+            # kinetic part
+            x_kine = self.kine_enc_embedding(x_kinematics)
+            x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+
+            #vision part
+            batch_size, seq_len, _, _, _ = x_vision.shape
+            # !!!!!非继承的tensor切记要移动到cuda中去
+            x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
+            for i in range(seq_len):
+                # x_feature在token learner之后是[batch_size,self.s,512]
+                x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
+                x_visions[:, i, :] = x_vision_single
+            x_visions = self.vision_embedding(x_visions)
+            x_visions, attns = self.encoder_vision_nodistil(x_visions)
+            x_fu = torch.cat((x_kine, x_visions), dim=2)
+            x_fu = self.enc_embedding(x_fu)
+            x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+            out = self.new_fc(x_fu)
+        elif args.model_type == 'vision':
+            pass
+
+
 
         if return_emb:
             return out, 0

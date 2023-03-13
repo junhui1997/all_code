@@ -59,6 +59,7 @@ parser.add_argument('--task_name', type=str, required=True,
 parser.add_argument('--seq_limit', type=int, required=True,
                     help="upper bound of  seq len.")
 parser.add_argument('--enc_in', type=int, default=14, help='encoder input size for kinetics data')
+parser.add_argument('--model_type', type=str, default='hybrid', help='model type: pure kinetics,pure vision,hybrid model')
 args = parser.parse_args()
 if args.task_name == 'su':
     args.num_classes = 10
