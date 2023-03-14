@@ -12,6 +12,8 @@ class my_Layernorm(nn.Module):
         self.layernorm = nn.LayerNorm(channels)
 
     def forward(self, x):
+        # 这一系列操作seq_len都没有改变
+        # 相当于对layer进行norm之后获取到一个新的x，之后对这新的x减去了这一段的均值，这样得到的是单纯的seasonal
         x_hat = self.layernorm(x)
         bias = torch.mean(x_hat, dim=1).unsqueeze(1).repeat(1, x.shape[1], 1)
         return x_hat - bias
@@ -82,6 +84,7 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     """
     Autoformer encoder
+    检查一下，感觉这个和informer是一样的
     """
     def __init__(self, attn_layers, conv_layers=None, norm_layer=None):
         super(Encoder, self).__init__()

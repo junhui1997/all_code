@@ -118,6 +118,7 @@ class DataEmbedding(nn.Module):
         return self.dropout(x)
 
 
+#只使用了token embedding
 class DataEmbedding_wo_pos(nn.Module):
     def __init__(self, c_in, d_model, embed_type='fixed', freq='h', dropout=0.1):
         super(DataEmbedding_wo_pos, self).__init__()

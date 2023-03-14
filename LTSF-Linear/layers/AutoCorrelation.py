@@ -103,11 +103,14 @@ class AutoCorrelation(nn.Module):
     def forward(self, queries, keys, values, attn_mask):
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
+        # query是来自于不同地方的，kv是来自于同一个地方的，出现这种情况应该是decoder里面会用到
         if L > S:
+            # 如果query比较长，给key，value中补上一段0
             zeros = torch.zeros_like(queries[:, :(L - S), :]).float()
             values = torch.cat([values, zeros], dim=1)
             keys = torch.cat([keys, zeros], dim=1)
         else:
+            # 截断key和value,如果query比较短
             values = values[:, :L, :, :]
             keys = keys[:, :L, :, :]
 
@@ -118,6 +121,8 @@ class AutoCorrelation(nn.Module):
         corr = torch.fft.irfft(res, dim=-1)
 
         # time delay agg
+        # 继承了nn.module，所以可以直接知道当前状态
+        # 这里应该是permute出现问题，所以才要使用contiguous
         if self.training:
             V = self.time_delay_agg_training(values.permute(0, 2, 3, 1).contiguous(), corr).permute(0, 3, 1, 2)
         else:
@@ -130,6 +135,9 @@ class AutoCorrelation(nn.Module):
 
 
 class AutoCorrelationLayer(nn.Module):
+    """
+        这里感觉也是一样的
+    """
     def __init__(self, correlation, d_model, n_heads, d_keys=None,
                  d_values=None):
         super(AutoCorrelationLayer, self).__init__()

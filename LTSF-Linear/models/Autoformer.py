@@ -21,12 +21,15 @@ class Model(nn.Module):
         self.output_attention = configs.output_attention
 
         # Decomp
+        # move_avg 25
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
 
         # Embedding
         # The series-wise connection inherently contains the sequential information.
         # Thus, we can discard the position embedding of transformers.
+        # 这里默认值是0
+        # drop_out = 0.05
         if configs.embed_type == 0:
             self.enc_embedding = DataEmbedding_wo_pos(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                                     configs.dropout)
@@ -99,6 +102,9 @@ class Model(nn.Module):
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec,
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
         # decomp init
+        # 其中trend中pred的seasonal_init部分是取了之前encoder的均值，而trend部分直接使用了0
+        # seasonal反应了局部的信息，因此使用过去一段的信息有一定参考意义，而trend部分不确定之后会发展到哪边去所以这里使用了0
+        # mean,zeros [batch_size,pred_len,dim]
         mean = torch.mean(x_enc, dim=1).unsqueeze(1).repeat(1, self.pred_len, 1)
         zeros = torch.zeros([x_dec.shape[0], self.pred_len, x_dec.shape[2]], device=x_enc.device)
         seasonal_init, trend_init = self.decomp(x_enc)
