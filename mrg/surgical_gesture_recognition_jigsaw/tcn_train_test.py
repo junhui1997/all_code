@@ -54,7 +54,7 @@ def train_model(model,
 
     step = 1
     update_bs = 8
-    v_accuracy_best = 0.0
+    v_accuracy_best = -0.001
     v_edit_score_best = 0.0
     best_model = None
     for epoch in range(num_epochs):

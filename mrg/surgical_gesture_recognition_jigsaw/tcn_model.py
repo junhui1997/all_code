@@ -13,6 +13,8 @@ import torch.nn.functional as F
 
 from models.encoder import Encoder, EncoderLayer, ConvLayer
 from models.encoder import Encoder as att_Encoder
+from models.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
+from models.Autoformer_EncDec import my_Layernorm
 from models.attn import FullAttention, ProbAttention, AttentionLayer
 from models.embed import DataEmbedding
 from module_box.feature_extraction import cnn_feature, cnn_feature50
@@ -42,7 +44,7 @@ class TcnGcnNet(nn.Module):
         attn = 'prob'
         factor = 5
         n_heads = 8
-        dropout = 0.0
+        dropout = 0.05
         d_ff = 512
         activation = 'gelu'
         e_layers_all = 8
@@ -95,6 +97,7 @@ class TcnGcnNet(nn.Module):
         e_layers_kine = 10
         self.kine_enc_embedding = DataEmbedding(args.enc_in, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
+        Attn = AutoCorrelation
         self.kine_encoder = att_Encoder(
             [
                 EncoderLayer(
@@ -106,7 +109,7 @@ class TcnGcnNet(nn.Module):
                     activation=activation
                 ) for l in range(e_layers_kine)
             ],
-            norm_layer=torch.nn.LayerNorm(d_model)
+            norm_layer=my_Layernorm(d_model)
         )
         # 512是d_model,128是左右两边的128,5是num_classes
         self.vision_conv = nn.Sequential(OrderedDict([
@@ -114,6 +117,11 @@ class TcnGcnNet(nn.Module):
         ]))
         self.vision_fc = torch.nn.Linear(512, 256)
         self.kine_fc = torch.nn.Linear(512, 256)
+        # self.new_fc = nn.Sequential(
+        #                             nn.Linear(512, 64),
+        #                             nn.ReLU(),
+        #                             nn.Dropout(0.4),
+        #                             nn.Linear(64, args.num_classes))
         self.new_fc = torch.nn.Linear(512, args.num_classes)
 
     def forward(self, x_vision, x_kinematics, return_emb=False):
@@ -125,8 +133,8 @@ class TcnGcnNet(nn.Module):
             x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
 
             x_fu = x_kine
-            x_fu = self.enc_embedding(x_fu)
-            x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+            #x_fu = self.enc_embedding(x_fu)
+            #x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
             out = self.new_fc(x_fu)
 
 
