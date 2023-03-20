@@ -44,7 +44,8 @@ class RawFeatureDataset(Dataset):
 
             if dataset_name in ['JIGSAWS', 'JIGSAWS_K', 'JIGSAWS_N', 'MISAW', 'Peg_Transfer']:
                 all_file = os.listdir(feature_dir)
-                data_file = os.path.join(feature_dir, trail_name + '.avi.mat')
+                split_folder = '/Split_{}/'.format(args.split)
+                data_file = os.path.join(feature_dir+split_folder, trail_name + '.avi.mat')
             else:
                 raise Exception('Invalid Dataset Name!') 
             

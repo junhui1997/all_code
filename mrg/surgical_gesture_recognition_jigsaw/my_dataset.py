@@ -22,7 +22,7 @@ class RawFeatureDataset(Dataset):
     def __init__(self, dataset_name, trail_list, args,
                  normalization=None , enc = None, flag='train'):
         super(RawFeatureDataset, self).__init__()
-
+        self.encode_level = 3
         # 所有video的名称
         self.trail_list = trail_list
         self.flag = flag
@@ -99,7 +99,7 @@ class RawFeatureDataset(Dataset):
         trail_len = len(df_item)
         imgs = None
         if self.args.model_type == 'kine':
-            imgs = torch.rand(1,1,1)
+            imgs = torch.rand(1,1,1,1)
         else:
             for i in range(trail_len):
                 file_name = "{}_capture1_frame_{}".format(trail,
@@ -120,11 +120,20 @@ class RawFeatureDataset(Dataset):
         #imgs = torch.rand(1,1,1)
         kinematics = df_item.iloc[:, 11:11 + self.args.enc_in].to_numpy().astype('float64')
         gesture = self.enc.transform(df_item['gesture'])
-        gesture = torch.tensor(gesture).to(torch.long)
+        gesture = np.array(gesture).reshape(-1,1)
+        padded_len = int(np.ceil(trail_len /
+                                 (2 ** self.encode_level))) * 2 ** self.encode_level
+        padded_imgs = torch.zeros([padded_len, imgs.shape[1], imgs.shape[2], imgs.shape[3]])
+        padded_imgs[0:trail_len] = imgs
+        padded_kinematics = np.zeros([padded_len, kinematics.shape[1]])
+        padded_kinematics[0:trail_len] = kinematics
+
+        padded_gesture = np.zeros([padded_len, 1]) - 1
+        padded_gesture[0:trail_len] = gesture
         # padded_feature这样相当于是将形状扩充了一下，扩充的部分为0，其余部分和原有的feature一致
-        return {'feature': imgs,
-                'gesture': gesture,
-                'kinematics': kinematics,
+        return {'feature': padded_imgs,
+                'gesture': padded_gesture,
+                'kinematics': padded_kinematics,
                 'trail_len':trail_len}
 
     def get_means(self):

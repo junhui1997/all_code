@@ -10,7 +10,13 @@ from GNN.gcn import GCN
 from dgl import DGLGraph
 import numpy as np
 import torch.nn.functional as F
-
+from config import args
+from models.encoder import Encoder, EncoderLayer, ConvLayer
+from models.encoder import Encoder as att_Encoder
+from models.attn import FullAttention, ProbAttention, AttentionLayer
+from models.embed import DataEmbedding
+from models.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
+from models.Autoformer_EncDec import my_Layernorm, series_decomp
 import time
 
 
@@ -133,7 +139,8 @@ class Encoder(nn.Module):
         self.module = nn.Sequential(OrderedDict(module_list))
 
     def forward(self, x):  # x: (batch,feature, seq)
-        return self.module(x)
+        out = self.module(x)
+        return out
 
 
 class Decoder(nn.Module):
@@ -199,7 +206,8 @@ class Decoder(nn.Module):
         self.module = nn.Sequential(OrderedDict(module_list))
 
     def forward(self, x):  # x: (batch,feature, seq)
-        return self.module(x)
+        out = self.module(x)
+        return out
 
 
 class EncoderDecoderNet(nn.Module):
@@ -212,6 +220,7 @@ class EncoderDecoderNet(nn.Module):
 
         self.encoder = Encoder(v_or_k, **encoder_params)
 
+        # 中间层纯粹按照需求添加一下
         self.middle_lstm = None
         if mid_lstm_params is not None:
             self.middle_lstm = LSTM_Layer(mid_lstm_params['input_size'],
@@ -269,7 +278,7 @@ class TcnGcnNet(nn.Module):
         #          1.0, 1.0,
         #          1.0, 1.0]
         #     )).unsqueeze(1).long()
-
+        # mid_lstm_params 默认是None
         self.tcn_vision = EncoderDecoderNet(0, hidden_state,
                                             encoder_params,
                                             decoder_params,
@@ -298,38 +307,175 @@ class TcnGcnNet(nn.Module):
         self.fc = nn.Linear(self.hidden_state * 3, class_num)
         nn.init.xavier_uniform_(self.fc.weight)
 
+        d_model = 512
+        attn = 'prob'
+        factor = 5
+        n_heads = 8
+        dropout = 0.05
+        d_ff = 512
+        activation = 'gelu'
+        e_layers = 1
+        distil = None
+        embed = 'fixed'
+        # 192 是最后一个维度，也就是dim
+        self.enc_embedding = DataEmbedding(64, d_model, embed, dropout)
+        Attn = ProbAttention if attn == 'prob' else FullAttention
+        Attn = AutoCorrelation
+        self.encoder_all = att_Encoder(
+            [
+                EncoderLayer(
+                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
+                                   d_model, n_heads, mix=False),
+                    d_model,
+                    d_ff,
+                    dropout=dropout,
+                    activation=activation
+                ) for l in range(e_layers)
+            ],
+
+            norm_layer=my_Layernorm(d_model)
+        )
+
+        ##2 part
+        self.decomp = series_decomp(25)
+        self.enc_embedding_2 = DataEmbedding(64, d_model, embed, dropout)
+        Attn = ProbAttention if attn == 'prob' else FullAttention
+        Attn = AutoCorrelation
+        self.encoder_all_2 = att_Encoder(
+            [
+                EncoderLayer(
+                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
+                                   d_model, n_heads, mix=False),
+                    d_model,
+                    d_ff,
+                    dropout=dropout,
+                    activation=activation
+                ) for l in range(e_layers)
+            ],
+
+            norm_layer=my_Layernorm(d_model)
+        )
+
+
+
+
+        attn = 'full'
+        e_layers = 5
+        self.kine_enc_embedding = DataEmbedding(14, d_model, embed, dropout)
+        Attn = ProbAttention if attn == 'prob' else FullAttention
+        self.kine_encoder = att_Encoder(
+            [
+                EncoderLayer(
+                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
+                                   d_model, n_heads, mix=False),
+                    d_model,
+                    d_ff,
+                    dropout=dropout,
+                    activation=activation
+                ) for l in range(e_layers)
+            ],
+            [
+                ConvLayer(
+                    d_model
+                ) for l in range(e_layers - 1)
+            ] if distil else None,
+            norm_layer=torch.nn.LayerNorm(d_model)
+        )
+        # 512是d_model,128是左右两边的128,5是num_classes
+        self.kine_fc = torch.nn.Linear(512, 128)
+        self.new_fc = torch.nn.Linear(512, args.num_classes)
+
+        # forward only change kinetic embedding
+
+    # 只使用vision信息
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #     x_kine = self.kine_enc_embedding(x_kinematics)
+    #     x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+    #     x_kine = self.kine_fc(x_kine)
+    #     x_vision = self.tcn_vision(x_vision)
+    #     # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+    #
+    #     x_fu = x_vision
+    #     x_fu = self.enc_embedding(x_fu)
+    #     x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+    #     out = self.new_fc(x_fu)
+    #
+    #     if return_emb:
+    #         return out, 0
+    #     else:
+    #         return out
+
+    # #forward only change kinetic embedding
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #     x_kine = self.kine_enc_embedding(x_kinematics)
+    #     x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
+    #     x_kine = self.kine_fc(x_kine)
+    #     x_vision = self.tcn_vision(x_vision)
+    #     # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+    #
+    #     x_fu = torch.cat((x_kine, x_vision), dim=2)
+    #     x_fu = self.enc_embedding(x_fu)
+    #     x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+    #     out = self.new_fc(x_fu)
+    #
+    #     if return_emb:
+    #         return out, 0
+    #     else:
+    #         return out
+
+        # forward only change final graph network
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #      x_left = x_kinematics[:, :, :7]
+    #      x_right = x_kinematics[:, :, 7:]
+    #
+    #      x_vision = self.tcn_vision(x_vision)
+    #      x_left_t = self.tcn_left(x_left)
+    #      x_right_t = self.tcn_right(x_right)
+    #
+    #      x_left_l, _ = self.lstm_left(x_left)
+    #      x_right_l, _ = self.lstm_right(x_right)
+    #
+    #      x_left = (x_left_t + x_left_l) / 2
+    #      x_right = (x_right_t + x_right_l) / 2
+    #      # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+    #
+    #      x_fu = torch.cat((x_left, x_right, x_vision), dim=2)
+    #      x_fu = self.enc_embedding(x_fu)
+    #      x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+    #      out = self.new_fc(x_fu)
+    #
+    #      if return_emb:
+    #          return out, 0
+    #      else:
+    #          return out
+
     def forward(self, x_vision, x_kinematics, return_emb=False):
-        x_left = x_kinematics[:, :, :7]
-        x_right = x_kinematics[:, :, 7:]
+         x_left = x_kinematics[:, :, :7]
+         x_right = x_kinematics[:, :, 7:]
 
-        x_vision = self.tcn_vision(x_vision)
-        x_left_t = self.tcn_left(x_left)
-        x_right_t = self.tcn_right(x_right)
+         x_vision = self.tcn_vision(x_vision)
+         x_left_t = self.tcn_left(x_left)
+         x_right_t = self.tcn_right(x_right)
 
-        x_left_l, _ = self.lstm_left(x_left)
-        x_right_l, _ = self.lstm_right(x_right)
+         x_left_l, _ = self.lstm_left(x_left)
+         x_right_l, _ = self.lstm_right(x_right)
 
-        x_left = (x_left_t + x_left_l) / 2
-        x_right = (x_right_t + x_right_l) / 2
-        # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+         x_left = (x_left_t + x_left_l) / 2
+         x_right = (x_right_t + x_right_l) / 2
+         # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
 
-        img_node = x_vision.permute(1, 0, 2)
-        left_node = x_left.permute(1, 0, 2)
-        right_node = x_right.permute(1, 0, 2)
+         x_fu = x_left + x_right + x_vision
+         seasonal_init, trend_init = self.decomp(x_fu)
 
-        graph_infeats = torch.cat([img_node, left_node, right_node], dim=1)
 
-        graph_ofeats = self.gnn(graph_infeats)
 
-        graph_ofeats = graph_ofeats.view(-1, 3 * self.hidden_state)
+         seasonal_init = self.enc_embedding(seasonal_init)
+         seasonal_init, attns = self.encoder_all(seasonal_init, attn_mask=None)
+         trend_init = self.enc_embedding(trend_init)
+         trend_init, attns = self.encoder_all(trend_init, attn_mask=None)
+         out = self.new_fc(trend_init+seasonal_init)
 
-        # graph_ofeats = F.dropout(graph_ofeats, p=0.2)
-
-        # graph_ofeats [video_len,64*3]
-        # out [video_len,num_class]
-        out = self.fc(graph_ofeats)
-
-        if return_emb:
-            return out, graph_infeats.view(-1, 3 * self.hidden_state)
-        else:
-            return out
+         if return_emb:
+             return out, 0
+         else:
+             return out

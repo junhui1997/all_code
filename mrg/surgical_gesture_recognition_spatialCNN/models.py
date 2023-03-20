@@ -38,7 +38,7 @@ class GestureClassifier(nn.Module):
         # TODO
         resnet = torchvision.models.resnet18(pretrained=True)
         last_layer_name = 'fc'
-        self.feature_dim = getattr(resnet, last_layer_name).in_features # 512
+        self.feature_dim = getattr(resnet, last_layer_name).in_features # 512 #this is the flatten 2-10 flatten [batch_size,512]
 
         self.base_model = torch.nn.Sequential()
         self.base_model.add_module("conv1", resnet.conv1)

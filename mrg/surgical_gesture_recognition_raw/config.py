@@ -60,3 +60,12 @@ parser.add_argument('--seq_limit', type=int, default=300,
 parser.add_argument('--enc_in', type=int, default=14, help='encoder input size for kinetics data')
 parser.add_argument('--model_type', type=str, default='hybrid', help='model type: pure kinetics,pure vision,hybrid model')
 args = parser.parse_args()
+if args.task_name == 'su':
+    args.num_classes = 10
+    gesture_class_num = 10
+elif args.task_name == 'kt':
+    args.num_classes = 6
+    gesture_class_num = 6
+elif args.task_name == 'np':
+    args.num_classes = 8
+    gesture_class_num = 8

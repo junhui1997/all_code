@@ -1,6 +1,6 @@
 {
     "experiment_setup":{
-        "sample_rate":1,
+        "sample_rate":3,
         "tcn_run_num":1,
         "trpo_test_run_num":10,
         "trpo_train_run_num":3
