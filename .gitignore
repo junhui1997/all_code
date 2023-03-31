@@ -1,2 +1,9 @@
 mrg/tcn_model/
 cuhk_dataset/
+mrg/graph/
+mrg/result/
+mrg/tcn_log/
+mrg/tcn_model/
+mrg/feature_extractor/checkpoints/
+Time-Series-Library/checkpoints/
+Time-Series-Library/results/

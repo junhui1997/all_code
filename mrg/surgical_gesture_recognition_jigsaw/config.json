@@ -1,6 +1,6 @@
 {
     "experiment_setup":{
-        "sample_rate":1,
+        "sample_rate":3,
         "tcn_run_num":1,
         "trpo_test_run_num":10,
         "trpo_train_run_num":3
@@ -54,8 +54,8 @@
                 }
             },
             "train_params":{
-                "num_epochs":15,
-                "learning_rate":0.0002,
+                "num_epochs":40,
+                "learning_rate":0.00005,
                 "batch_size":1,
                 "weight_decay":0.0001
             }

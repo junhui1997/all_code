@@ -94,13 +94,28 @@ def train(model, args, train_loader, test_loader):
 
         print('current accuracy in Epoch: {0} is {1:.7f}'.format(epoch + 1, current_accuray))
         if current_accuray > best_accuracy:
-            path = 'checkpoints'
             best_accuracy = current_accuray
-            torch.save(model.state_dict(), path + '/' + 'checkpoint.pth')
-            best_model_path = path + '/' + 'checkpoint.pth'
+            best_model_path = 'checkpoints/{}_{}_checkpoint.pth'.format(args.task_name, args.split)
+            torch.save(model.state_dict(), best_model_path)
     model.load_state_dict(torch.load(best_model_path))
     print('best accuracy is ', best_accuracy)
+    return model
 
+
+def eval(model,train_trail_list,test_trail_list,args):
+    model.eval()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    for trail in train_trail_list:
+        train_dataset = RawFeatureDataset(args, [trail])
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                                   batch_size=32, shuffle=True,drop_last=False)
+
+        for i, (batch_x, batch_y, batch_z) in enumerate(train_loader):
+
+            batch_x = batch_x.float()
+            batch_x = batch_x.to(device)
+
+            outputs, feature = model(batch_x, return_feature=True)
 
 
 
@@ -125,7 +140,15 @@ def main():
                                                batch_size=32, shuffle=True)
 
     model = cnn_feature18(args=args)
-    train(model, args, train_loader, test_loader)
+    if args.mode == 'train':
+        model = train(model, args, train_loader, test_loader)
+    elif args.mode == 'test':
+        best_model_path = 'checkpoints/{}_{}_checkpoint.pth'.format(args.task_name, args.split)
+        model = model.cuda()
+        model = model.load_state_dict(torch.load(best_model_path))
+
+    eval(model,train_trail_list,test_trail_list,args)
+
 
 if __name__ == '__main__':
     main()

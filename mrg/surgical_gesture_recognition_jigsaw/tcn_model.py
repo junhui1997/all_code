@@ -362,9 +362,10 @@ class TcnGcnNet(nn.Module):
 
 
         attn = 'full'
-        e_layers = 5
-        self.kine_enc_embedding = DataEmbedding(14, d_model, embed, dropout)
+        e_layers = 20
+        self.kine_enc_embedding = DataEmbedding(76, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
+        Attn = AutoCorrelation
         self.kine_encoder = att_Encoder(
             [
                 EncoderLayer(
@@ -451,33 +452,48 @@ class TcnGcnNet(nn.Module):
     #      else:
     #          return out
 
+    ## to use
+    # def forward(self, x_vision, x_kinematics, return_emb=False):
+    #     batch_size, seq_len, _, _, _ = x_vision.shape
+    #     # !!!!!非继承的tensor切记要移动到cuda中去
+    #     x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
+    #     for i in range(seq_len):
+    #         # x_feature在token learner之后是[batch_size,self.s,512]
+    #         x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
+    #         x_visions[:, i, :] = x_vision_single
+    #
+    #
+    #
+    #     x_vision = self.tcn_vision(x_visions)
+    #
+    #     # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+    #
+    #     x_fu = x_vision
+    #     seasonal_init, trend_init = self.decomp(x_fu)
+    #
+    #
+    #
+    #     seasonal_init = self.enc_embedding(seasonal_init)
+    #     seasonal_init, attns = self.encoder_all(seasonal_init, attn_mask=None)
+    #     trend_init = self.enc_embedding(trend_init)
+    #     trend_init, attns = self.encoder_all(trend_init, attn_mask=None)
+    #     out = self.new_fc(trend_init+seasonal_init)
+    #
+    #     if return_emb:
+    #         return out, 0
+    #     else:
+    #         return out
+
     def forward(self, x_vision, x_kinematics, return_emb=False):
-        batch_size, seq_len, _, _, _ = x_vision.shape
-        # !!!!!非继承的tensor切记要移动到cuda中去
-        x_visions = torch.Tensor(batch_size, seq_len, 1000).cuda()
-        for i in range(seq_len):
-            # x_feature在token learner之后是[batch_size,self.s,512]
-            x_vision_single = self.cnn_feature(x_vision[:, i, :, :, :])
-            x_visions[:, i, :] = x_vision_single
 
 
+        if args.model_type == 'kine':
+            # kinetic part
+            x_kine = self.kine_enc_embedding(x_kinematics)
+            x_kine, attn_kine = self.kine_encoder(x_kine, attn_mask=None)
 
-        x_vision = self.tcn_vision(x_visions)
-
-        # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
-
-        x_fu = x_vision
-        seasonal_init, trend_init = self.decomp(x_fu)
-
-
-
-        seasonal_init = self.enc_embedding(seasonal_init)
-        seasonal_init, attns = self.encoder_all(seasonal_init, attn_mask=None)
-        trend_init = self.enc_embedding(trend_init)
-        trend_init, attns = self.encoder_all(trend_init, attn_mask=None)
-        out = self.new_fc(trend_init+seasonal_init)
-
-        if return_emb:
-            return out, 0
-        else:
-            return out
+            x_fu = x_kine
+            #x_fu = self.enc_embedding(x_fu)
+            #x_fu, attns = self.encoder_all(x_fu, attn_mask=None)
+            out = self.new_fc(x_fu)
+        return out

@@ -311,7 +311,7 @@ class TcnGcnNet(nn.Module):
         attn = 'prob'
         factor = 5
         n_heads = 8
-        dropout = 0.05
+        dropout = 0.1
         d_ff = 512
         activation = 'gelu'
         e_layers = 1
@@ -337,7 +337,7 @@ class TcnGcnNet(nn.Module):
         )
 
         ##2 part
-        self.decomp = series_decomp(25)
+        self.decomp = series_decomp(3)
         self.enc_embedding_2 = DataEmbedding(64, d_model, embed, dropout)
         Attn = ProbAttention if attn == 'prob' else FullAttention
         Attn = AutoCorrelation

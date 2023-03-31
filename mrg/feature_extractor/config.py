@@ -58,6 +58,10 @@ parser.add_argument('--seq_limit', type=int, default=300,
                     help="task_name.")
 parser.add_argument('--train_epochs', type=int, default=10,
                     help="task_name.")
+parser.add_argument('--mode', type=str, default='train',
+                    help="to train the model or evaluate model.")
+
+
 
 args = parser.parse_args()
 if args.task_name == 'su':
