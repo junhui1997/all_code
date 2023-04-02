@@ -189,6 +189,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         self.model.eval()
         with torch.no_grad():
+            # test时候batch_size为1
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
@@ -197,6 +198,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
                 # decoder input
+                # batch_y原本是label+pred,现在将pred部分全部替换为0
+                # 对于timenet模型没有使用decoder部分，相当于是直接从encoder部分给映射出去了
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
                 # encoder - decoder
@@ -213,7 +216,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     else:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
+
                 f_dim = -1 if self.args.features == 'MS' else 0
+                # 这里相当于都取了预测的部分，删除了之前的label部分
+                # output&batch_y: [batch_size,label+pred, dim] ->[batch_size,pred,dim]
                 outputs = outputs[:, -self.args.pred_len:, f_dim:]
                 batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                 outputs = outputs.detach().cpu().numpy()
@@ -222,13 +228,22 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 pred = outputs
                 true = batch_y
 
+                scale = True
+                if scale:
+                    # 使用了dataset中的fit的数值
+                    # pred,true 这里有个多于的维度1，也就是初始时候的batch_size
+                    pred[0] = test_data.inverse_transform(pred[0])
+                    true[0] = test_data.inverse_transform(true[0])
                 preds.append(pred)
                 trues.append(true)
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
-                    gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
-                    pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
-                    visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
+                    if scale:
+                        input[0] = test_data.inverse_transform(input[0])
+                    gt = np.concatenate((input[0, :, 0], true[0, :, 0]), axis=0)
+                    pd = np.concatenate((input[0, :, 0], pred[0, :, 0]), axis=0)
+                    # 图像中前半段是完全一致的所以这里只有一种颜色，注意看两种颜色的线有交点
+                    visual(gt, pd, os.path.join(folder_path, str(i) + '.jpg'))
 
         preds = np.array(preds)
         trues = np.array(trues)
@@ -250,6 +265,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.write('\n')
         f.write('\n')
         f.close()
+
+        # scale = True
+        # if scale:
+        #     # 使用了dataset中的fit的数值
+        #     preds[0] = test_data.inverse_transform(preds[0])
+        #     trues[0] = test_data.inverse_transform(trues[0])
 
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)

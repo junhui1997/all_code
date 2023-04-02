@@ -6,12 +6,16 @@ import re
 import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
-from utils.timefeatures import time_features
-from data_provider.m4 import M4Dataset, M4Meta
-from data_provider.uea import subsample, interpolate_missing, Normalizer
-import sktime
-from sktime import datasets as load_data
-import warnings
+from scipy.signal import butter, filtfilt
+
+# 设计二阶巴特沃斯低通滤波器
+def butter_lowpass_filter(data, cutoff, fs, order=2):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    # 应用滤波器
+    filtered_data = filtfilt(b, a, data)
+    return filtered_data
 class Dataset_bone_drill(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
@@ -47,8 +51,10 @@ class Dataset_bone_drill(Dataset):
         dir_list = os.listdir(drill_folder)
         df_raw = None
         for file_name in dir_list:
-            df = pd.read_csv(drill_folder + dir_list[0], delimiter=' ')
+            df = pd.read_csv(drill_folder + file_name, delimiter=' ')
             df.columns = ['X', 'Y', 'Z', 'A', 'B', 'C']
+            # 额外添加一个column在这里，之后再给drop掉等下，这个只是为了求下面的num_train
+            df['file_name'] = file_name
             if df_raw is None:
                 df_raw = df
             else:
@@ -57,15 +63,23 @@ class Dataset_bone_drill(Dataset):
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
-        df_raw = df_raw[::100]
+        df_raw = df_raw[::50]
+        train_ratio = int(0.7*len(dir_list))
+        val_ratio = int(0.9*len(dir_list))
 
-        num_train = int(len(df_raw) * 0.7)
-        num_test = int(len(df_raw) * 0.2)
+        train_files = dir_list[:train_ratio]
+        val_files = dir_list[train_ratio:val_ratio]
+        test_files = dir_list[val_ratio:]
+
+        # 只需要确定num_train即可
+        num_train = len(df_raw[df_raw['file_name'].isin(train_files)])
+        num_test = len(df_raw[df_raw['file_name'].isin(test_files)])
         num_vali = len(df_raw) - num_train - num_test
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
+        df_raw.drop('file_name', axis=1, inplace=True)
 
         if self.features == 'M' or self.features == 'MS':
             cols_data = df_raw.columns

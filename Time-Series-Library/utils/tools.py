@@ -75,6 +75,7 @@ class StandardScaler():
 def visual(true, preds=None, name='./pic/test.pdf'):
     """
     Results visualization
+
     """
     plt.figure()
     plt.plot(true, label='GroundTruth', linewidth=2)

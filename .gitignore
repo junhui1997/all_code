@@ -7,3 +7,4 @@ mrg/tcn_model/
 mrg/feature_extractor/checkpoints/
 Time-Series-Library/checkpoints/
 Time-Series-Library/results/
+Time-Series-Library/test_results/
