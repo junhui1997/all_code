@@ -16,10 +16,18 @@ def butter_lowpass_filter(data, cutoff, fs, order=2):
     # 应用滤波器
     filtered_data = filtfilt(b, a, data)
     return filtered_data
+def apply_filter(df,args):
+    if args.filter == 'low_pass':
+        cutoff = 0.1  # 截止频率
+        fs = 10  # 采样率
+        for idx in range(len(df.columns)):
+            filtered_data = butter_lowpass_filter(df[df.columns[idx]], cutoff, fs, order=2)
+            df[df.columns[idx]] = filtered_data
+        return df
 class Dataset_bone_drill(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='A', scale=True, timeenc=0, freq='h', seasonal_patterns=None):
+                 target='A', scale=True, timeenc=0, freq='h', seasonal_patterns=None,args=None):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:
@@ -31,6 +39,7 @@ class Dataset_bone_drill(Dataset):
             self.label_len = size[1]
             self.pred_len = size[2]
         # init
+        self.args = args
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
@@ -53,6 +62,9 @@ class Dataset_bone_drill(Dataset):
         for file_name in dir_list:
             df = pd.read_csv(drill_folder + file_name, delimiter=' ')
             df.columns = ['X', 'Y', 'Z', 'A', 'B', 'C']
+            # 添加是否使用滤波器
+            if self.args.filter != 'no_filter':
+                df = apply_filter(df,self.args)
             # 额外添加一个column在这里，之后再给drop掉等下，这个只是为了求下面的num_train
             df['file_name'] = file_name
             if df_raw is None:
@@ -64,8 +76,8 @@ class Dataset_bone_drill(Dataset):
         df_raw.columns: ['date', ...(other features), target feature]
         '''
         df_raw = df_raw[::50]
-        train_ratio = int(0.7*len(dir_list))
-        val_ratio = int(0.9*len(dir_list))
+        train_ratio = int(0.6*len(dir_list))
+        val_ratio = int(0.8*len(dir_list))
 
         train_files = dir_list[:train_ratio]
         val_files = dir_list[train_ratio:val_ratio]

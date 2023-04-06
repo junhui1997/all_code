@@ -19,3 +19,6 @@ mse:0.07998475432395935, mae:0.128726989030838
 long_term_forecast_bone_drill_96_96_TimesNet_bone_drill_ftM_sl96_ll48_pl32_dm16_nh8_el2_dl1_df32_fc3_ebnone_dtTrue_'Exp'_0  
 mse:0.04507720097899437, mae:0.10208464413881302
 
+long_term_forecast_bone_drill_96_32_TimesNet_bone_drill_ftM_sl96_ll48_pl32_dm16_nh8_el2_dl1_df32_fc3_ebnone_dtTrue_'Exp'_0  
+mse:0.02266356162726879, mae:0.057637184858322144
+

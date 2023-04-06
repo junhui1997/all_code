@@ -71,19 +71,35 @@ def data_provider(args, flag):
         )
         return data_set, data_loader
     else:
+        # 这里是time series forecasting
         if args.data == 'm4':
             drop_last = False
-        data_set = Data(
-            root_path=args.root_path,
-            data_path=args.data_path,
-            flag=flag,
-            size=[args.seq_len, args.label_len, args.pred_len],
-            features=args.features,
-            target=args.target,
-            timeenc=timeenc,
-            freq=freq,
-            seasonal_patterns=args.seasonal_patterns
-        )
+
+        if args.data == 'bone_drill':
+            data_set = Data(
+                root_path=args.root_path,
+                data_path=args.data_path,
+                flag=flag,
+                size=[args.seq_len, args.label_len, args.pred_len],
+                features=args.features,
+                target=args.target,
+                timeenc=timeenc,
+                freq=freq,
+                seasonal_patterns=args.seasonal_patterns,
+                args=args
+            )
+        else:
+            data_set = Data(
+                root_path=args.root_path,
+                data_path=args.data_path,
+                flag=flag,
+                size=[args.seq_len, args.label_len, args.pred_len],
+                features=args.features,
+                target=args.target,
+                timeenc=timeenc,
+                freq=freq,
+                seasonal_patterns=args.seasonal_patterns
+            )
         print(flag, len(data_set))
         data_loader = DataLoader(
             data_set,
