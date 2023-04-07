@@ -1,6 +1,6 @@
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
-from utils.tools import EarlyStopping, adjust_learning_rate, visual
+from utils.tools import EarlyStopping, adjust_learning_rate, visual, visual_all, extract_seq
 from utils.metrics import metric
 import torch
 import torch.nn as nn
@@ -266,11 +266,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.write('\n')
         f.close()
 
-        # scale = True
-        # if scale:
-        #     # 使用了dataset中的fit的数值
-        #     preds[0] = test_data.inverse_transform(preds[0])
-        #     trues[0] = test_data.inverse_transform(trues[0])
+        # visualize the res of pred and trues
+        seq_len = pred.shape[1]
+        res_pred = extract_seq(pred, seq_len)
+        res_true = extract_seq(true, seq_len)
+        visual_all(res_true, res_pred, os.path.join(folder_path, 'res.jpg'))
 
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)

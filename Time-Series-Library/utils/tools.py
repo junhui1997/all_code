@@ -111,3 +111,24 @@ def adjustment(gt, pred):
 
 def cal_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
+
+
+def extract_seq(data, seq_len):
+    data = data[::seq_len, :, :]
+    print(data.shape)
+    data = data.reshape(-1, data.shape[-1])
+    return data
+
+
+def visual_all(res_true, res_pred, name):
+    fig, axs = plt.subplots(2, 3, figsize=(12, 6))
+    idx = 0
+    for i in range(len(axs)):
+        for j in range(len(axs[0])):
+            # 绘制第一个子图
+            axs[i][j].plot(res_true[:, idx], label='GroundTruth')
+            axs[i][j].plot(res_pred[:, idx], label='Prediction')
+            axs[i][j].legend()
+            axs[i][j].set_title('Subplot {}'.format(idx))
+            idx += 1
+    plt.savefig(name)
