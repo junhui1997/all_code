@@ -75,7 +75,7 @@ class Dataset_bone_drill(Dataset):
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
-        df_raw = df_raw[::50]
+        df_raw = df_raw[::2]
         # 添加是否使用滤波器
         if self.args.filter != 'no_filter':
             df_raw = apply_filter(df_raw, self.args)
