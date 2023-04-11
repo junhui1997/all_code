@@ -115,7 +115,7 @@ def cal_accuracy(y_pred, y_true):
 
 def extract_seq(data, seq_len):
     data = data[::seq_len, :, :]
-    print(data.shape)
+    #print(data.shape)
     data = data.reshape(-1, data.shape[-1])
     return data
 

@@ -267,9 +267,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.close()
 
         # visualize the res of pred and trues
-        seq_len = pred.shape[1]
-        res_pred = extract_seq(pred, seq_len)
-        res_true = extract_seq(true, seq_len)
+        seq_len = self.args.seq_len
+        res_pred = extract_seq(preds, seq_len)
+        res_true = extract_seq(trues, seq_len)
         visual_all(res_true, res_pred, os.path.join(folder_path, 'res.jpg'))
 
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
