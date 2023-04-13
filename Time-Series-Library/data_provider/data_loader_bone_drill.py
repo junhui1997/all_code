@@ -18,6 +18,13 @@ def butter_lowpass_filter(data, cutoff, fs, order=2):
     return filtered_data
 
 
+def moving_average(data, window_size):
+    # 构造窗口
+    window = np.ones(window_size) / float(window_size)
+    # 使用convolve函数对数据进行滤波
+    return np.convolve(data, window, 'same')
+
+
 def apply_filter(df, args):
     if args.filter == 'low_pass':
         cutoff = 0.1  # 截止频率
@@ -26,7 +33,12 @@ def apply_filter(df, args):
             if df[df.columns[idx]].dtype == 'float64':
                 filtered_data = butter_lowpass_filter(df[df.columns[idx]], cutoff, fs, order=2)
                 df[df.columns[idx]] = filtered_data
-        return df
+    if args.filter == 'mean':
+        for idx in range(len(df.columns)):
+            if df[df.columns[idx]].dtype == 'float64':
+                filtered_data = moving_average(df[df.columns[idx]], window_size=250)
+                df[df.columns[idx]] = filtered_data
+    return df
 class Dataset_bone_drill(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
