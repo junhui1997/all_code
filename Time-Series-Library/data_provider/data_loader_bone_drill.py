@@ -79,6 +79,9 @@ class Dataset_bone_drill(Dataset):
             df.columns = ['X', 'Y', 'Z', 'A', 'B', 'C']
             # 额外添加一个column在这里，之后再给drop掉等下，这个只是为了求下面的num_train
             df['file_name'] = file_name
+            for col in df.columns:
+                if df[col].dtype == 'float64':
+                    df[col] -= df[col].iloc[0]
             if df_raw is None:
                 df_raw = df
             else:
