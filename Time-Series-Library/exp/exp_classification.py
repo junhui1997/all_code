@@ -113,10 +113,10 @@ class Exp_Classification(Exp_Basic):
                 label = label.to(self.device)
 
                 outputs = self.model(batch_x, padding_mask, None, None)
-                loss = criterion(outputs, label.long().squeeze(-1))
+                # print('count', i, outputs.shape, label.shape, label.squeeze(-1).shape)
+                loss = criterion(outputs, label.long())
                 train_loss.append(loss.item())
-
-                if (i + 1) % 100 == 0:
+                if (i + 1) % 200 == 0:
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)

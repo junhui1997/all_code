@@ -177,7 +177,8 @@ class Dataset_bone_drill_c(Dataset):
         file_name = 'df_label.pkl'
         df = pd.read_pickle(drill_folder + file_name)
         df = df.drop(columns='time_stamp')
-        df = df[::2]
+        df = df[::2] # classifcaion
+        a = 1
         # normalizer = Normalizer()
         # df = normalizer.normalize(df)
         self.scaler.fit(df.iloc[:, :self.enc_in].values)
@@ -199,6 +200,8 @@ class Dataset_bone_drill_c(Dataset):
         # 不drop的话还会保存原本的index并形成新的一列
         x_train = x_train.reset_index(drop=True)
         x_test = x_test.reset_index(drop=True)
+        ans = x_train['label'].isnull().any()
+        ans_t = x_test['label'].isnull().any()
         y_train = x_train['label']
         y_test = x_test['label']
         # 在这里先没有考虑seq_len,对于这个数据集来说最长是128
