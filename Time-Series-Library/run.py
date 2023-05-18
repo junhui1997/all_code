@@ -122,6 +122,7 @@ else:
 
 if args.is_training:
     for ii in range(args.itr):
+        args.seed = random.randint(0,4294967294)
         # setting record of experiments
         setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
             args.task_name,

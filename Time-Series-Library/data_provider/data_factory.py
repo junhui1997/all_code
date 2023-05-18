@@ -1,7 +1,7 @@
 from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
     MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
 from data_provider.uea import collate_fn
-from data_provider.data_loader_bone_drill import Dataset_bone_drill
+from data_provider.data_loader_bone_drill import Dataset_bone_drill, Dataset_bone_drill_c
 from torch.utils.data import DataLoader
 
 data_dict = {
@@ -17,7 +17,8 @@ data_dict = {
     'SMD': SMDSegLoader,
     'SWAT': SWATSegLoader,
     'UEA': UEAloader,
-    'bone_drill': Dataset_bone_drill
+    'bone_drill': Dataset_bone_drill,
+    'bone_drill_c': Dataset_bone_drill_c
 }
 
 
@@ -56,10 +57,16 @@ def data_provider(args, flag):
         return data_set, data_loader
     elif args.task_name == 'classification':
         drop_last = False
-        data_set = Data(
-            root_path=args.root_path,
-            flag=flag,
-        )
+        if args.data == 'bone_drill_c':
+            data_set = Data(
+                flag=flag,
+                args=args
+            )
+        else:
+            data_set = Data(
+                root_path=args.root_path,
+                flag=flag,
+            )
         print(flag, len(data_set))
         data_loader = DataLoader(
             data_set,

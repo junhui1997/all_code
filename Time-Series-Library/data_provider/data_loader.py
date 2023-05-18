@@ -723,8 +723,9 @@ class UEAloader(Dataset):
     def __getitem__(self, ind):
         # data: [seq_len,dim] label:[1]
         # for japanese, data[25,12] ,label[1]
-        # data = torch.from_numpy(self.feature_df.loc[self.all_IDs[ind]].values)
-        # label = torch.from_numpy(self.labels_df.loc[self.all_IDs[ind]].values)
+        # Q: 对于classification 任务，如果会有或长或短的列，那么batch_size需要设置为1
+        data = torch.from_numpy(self.feature_df.loc[self.all_IDs[ind]].values)
+        label = torch.from_numpy(self.labels_df.loc[self.all_IDs[ind]].values)
         return self.instance_norm(torch.from_numpy(self.feature_df.loc[self.all_IDs[ind]].values)), \
                torch.from_numpy(self.labels_df.loc[self.all_IDs[ind]].values)
 

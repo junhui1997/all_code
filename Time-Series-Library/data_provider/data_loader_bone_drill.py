@@ -7,6 +7,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from scipy.signal import butter, filtfilt
+from sklearn.model_selection import train_test_split
+from data_provider.uea import subsample, interpolate_missing, Normalizer
 
 # 设计二阶巴特沃斯低通滤波器
 def butter_lowpass_filter(data, cutoff, fs, order=2):
@@ -90,7 +92,7 @@ class Dataset_bone_drill(Dataset):
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
-        df_raw = df_raw[::20]
+        df_raw = df_raw[::2]
         # 添加是否使用滤波器
         if self.args.filter != 'no_filter':
             df_raw = apply_filter(df_raw, self.args)
@@ -149,3 +151,72 @@ class Dataset_bone_drill(Dataset):
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)
+
+class Dataset_bone_drill_c(Dataset):
+    def __init__(self, flag='train', args=None):
+        # size [seq_len, label_len, pred_len]
+        # info
+        self.seq_len = args.seq_len
+        self.enc_in = args.enc_in
+        self.seed = args.seed
+
+        # init
+        # 对于classification任务只会划分为train test
+        self.args = args
+        assert flag in ['TRAIN', 'TEST']
+        self.flag = flag
+
+        self.__read_data__()
+
+    def __read_data__(self):
+        '''
+          df_raw.columns: ['date', ...(other features), target feature]
+        '''
+        self.scaler = StandardScaler()
+        drill_folder = '../dataset/'
+        file_name = 'df_label.pkl'
+        df = pd.read_pickle(drill_folder + file_name)
+        df = df.drop(columns='time_stamp')
+        df = df[::2]
+        # normalizer = Normalizer()
+        # df = normalizer.normalize(df)
+        self.scaler.fit(df.iloc[:, :self.enc_in].values)
+        df.iloc[:, :self.enc_in] = self.scaler.transform(df.iloc[:, :self.enc_in].values)
+        # 添加是否使用滤波器
+        if self.args.filter != 'no_filter':
+            df = apply_filter(df, self.args)
+
+        # 这里也可以直接生成一个index list，只会对index list进行tran test split即可
+        val_list = []
+        label_list = []
+        for i in range(self.seq_len, df.shape[0], self.seq_len):
+            val = df.iloc[i - self.seq_len:i, :self.enc_in].to_numpy().astype('float64')
+            label = df.iloc[i]['label']
+            val_list.append(val)
+            label_list.append(label)
+        df_clean = pd.DataFrame({"value list": val_list, "label": label_list})
+        x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
+        # 不drop的话还会保存原本的index并形成新的一列
+        x_train = x_train.reset_index(drop=True)
+        x_test = x_test.reset_index(drop=True)
+        y_train = x_train['label']
+        y_test = x_test['label']
+        # 在这里先没有考虑seq_len,对于这个数据集来说最长是128
+        if self.flag == 'TRAIN':
+            self.data_x = x_train
+            self.data_y = y_train
+            self.ds_len = len(y_train)
+        elif self.flag == 'TEST':
+            self.data_x = x_test
+            self.data_y = y_test
+            self.ds_len = len(y_test)
+
+    def __getitem__(self, index):
+        data = self.data_x['value list'].iloc[index].astype('float64')
+        data = torch.from_numpy(data)
+        label = torch.tensor(self.data_y[index]).to(torch.long)
+        return data, label
+
+    def __len__(self):
+        return self.ds_len
+
