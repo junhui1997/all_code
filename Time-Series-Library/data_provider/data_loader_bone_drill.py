@@ -38,7 +38,7 @@ def apply_filter(df, args):
     if args.filter == 'mean':
         for idx in range(len(df.columns)):
             if df[df.columns[idx]].dtype == 'float64':
-                filtered_data = moving_average(df[df.columns[idx]], window_size=250)
+                filtered_data = moving_average(df[df.columns[idx]], window_size=5)
                 df[df.columns[idx]] = filtered_data
     return df
 class Dataset_bone_drill(Dataset):
@@ -217,7 +217,8 @@ class Dataset_bone_drill_c(Dataset):
     def __getitem__(self, index):
         data = self.data_x['value list'].iloc[index].astype('float64')
         data = torch.from_numpy(data)
-        label = torch.tensor(self.data_y[index]).to(torch.long)
+        # 这里为了照顾这个程序多加了一个【】
+        label = torch.tensor([self.data_y[index]]).to(torch.long)
         return data, label
 
     def __len__(self):

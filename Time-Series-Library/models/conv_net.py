@@ -80,8 +80,12 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             self.act = F.gelu
             self.dropout = nn.Dropout(configs.dropout)
+            if configs.seq_len % (2**configs.e_layers) == 0:
+                factor = 0
+            else:
+                factor = 1
             self.projection = nn.Linear(
-                configs.d_model * configs.seq_len//(2**configs.e_layers), configs.num_class)
+                configs.d_model * (configs.seq_len//(2**configs.e_layers)+factor), configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
 
@@ -118,6 +122,7 @@ class Model(nn.Module):
         output = self.act(enc_out)
         output = self.dropout(output)
         # zero-out padding embeddings
+        # output = output * x_mark_enc.unsqueeze(-1)
         # (batch_size, seq_length * d_model)
         output = output.reshape(output.shape[0], -1)
         output = self.projection(output)  # (batch_size, num_classes)

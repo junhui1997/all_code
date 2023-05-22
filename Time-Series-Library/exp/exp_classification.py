@@ -63,7 +63,8 @@ class Exp_Classification(Exp_Basic):
                 outputs = self.model(batch_x, padding_mask, None, None)
 
                 pred = outputs.detach().cpu()
-                loss = criterion(pred, label.long().cpu())
+                # print(pred.shape, label.shape)
+                loss = criterion(pred, label.long().squeeze(-1).cpu())
                 total_loss.append(loss)
 
                 preds.append(outputs.detach())
@@ -114,7 +115,7 @@ class Exp_Classification(Exp_Basic):
 
                 outputs = self.model(batch_x, padding_mask, None, None)
 
-                loss = criterion(outputs, label.long())
+                loss = criterion(outputs, label.long().squeeze(-1))
                 train_loss.append(loss.item())
                 if (i + 1) % 200 == 0:
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
@@ -174,7 +175,7 @@ class Exp_Classification(Exp_Basic):
 
         preds = torch.cat(preds, 0)
         trues = torch.cat(trues, 0)
-        print('test shape:', preds.shape, trues.shape)
+        # print('test shape:', preds.shape, trues.shape)
 
         probs = torch.nn.functional.softmax(preds)  # (total_samples, num_classes) est. prob. for each class and sample
         predictions = torch.argmax(probs, dim=1).cpu().numpy()  # (total_samples,) int class index for each sample
