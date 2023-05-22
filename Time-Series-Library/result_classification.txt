@@ -1,6 +1,7 @@
 classification_JapaneseVowels_TimesNet_UEA_ftM_sl96_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
 accuracy:0.9756756756756757
 
+<<<<<<< HEAD
 classification_bone_c_TimesNet_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
 accuracy:0.7667844522968198
 
@@ -33,4 +34,23 @@ accuracy:0.6254416961130742
 
 classification_bone_c_DLinear_bone_drill_c_ftM_sl400_ll48_pl96_dm128_nh8_el3_dl1_df256_fc1_ebtimeF_dtTrue_'Exp'_0  
 accuracy:0.657243816254417
+=======
+classification_bone_c_lstm_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7561837455830389
+
+classification_bone_c_lstm_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7526501766784452
+
+classification_bone_c_lstm_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7526501766784452
+
+classification_bone_c_conv_net_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7703180212014135
+
+classification_bone_c_conv_net_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7526501766784452
+
+classification_bone_c_conv_net_bone_drill_c_ftM_sl1000_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.6991150442477876
+>>>>>>> a2c2b13 (add conv and lstm)
 

@@ -63,7 +63,7 @@ class Exp_Classification(Exp_Basic):
                 outputs = self.model(batch_x, padding_mask, None, None)
 
                 pred = outputs.detach().cpu()
-                loss = criterion(pred, label.long().squeeze().cpu())
+                loss = criterion(pred, label.long().cpu())
                 total_loss.append(loss)
 
                 preds.append(outputs.detach())
@@ -113,7 +113,10 @@ class Exp_Classification(Exp_Basic):
                 label = label.to(self.device)
 
                 outputs = self.model(batch_x, padding_mask, None, None)
+<<<<<<< HEAD
                 # print('count', i, outputs.shape, label.shape, label.squeeze(-1).shape)
+=======
+>>>>>>> a2c2b13 (add conv and lstm)
                 loss = criterion(outputs, label.long())
                 train_loss.append(loss.item())
                 if (i + 1) % 200 == 0:

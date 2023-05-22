@@ -45,6 +45,7 @@ class TimesBlock(nn.Module):
         self.pred_len = configs.pred_len
         self.k = configs.top_k
         # parameter-efficient design
+        # d_ff是卷积层的中间变量，因为使用了一个d_model->d_ff->d_model的变化
         self.conv = nn.Sequential(
             Inception_Block_V1(configs.d_model, configs.d_ff,
                                num_kernels=configs.num_kernels),
@@ -119,7 +120,7 @@ class Model(nn.Module):
         self.layer = configs.e_layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
-            # 只有预测任务有predict_linear
+            # 只有预测任务有predict_linear，这里相当于是不使用encoder-decoder structure就能实现生成式模型
             self.predict_linear = nn.Linear(self.seq_len, self.pred_len + self.seq_len)
             # bias这个bool量决定是否引入偏置项
             # projection是最后的输出层了
