@@ -54,3 +54,6 @@ classification_bone_c_conv_net_bone_drill_c_ftM_sl1000_ll48_pl96_dm64_nh8_el2_dl
 accuracy:0.6991150442477876
 >>>>>>> a2c2b13 (add conv and lstm)
 
+classification_bone_c_conv_net_bone_drill_c_ftM_sl1000_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.7079646017699115
+
