@@ -9,39 +9,22 @@ from layers.Conv_Blocks import Inception_Block_V1
 input:【batch_size,seq_len,dim]
 output:[batch_size,seq_len,dim]
 对于本例input和output都是d_model
-input dim:就是dim
-hidden_dim:输出线性层中的尺寸,也是lstm中d_model的尺寸
-layer_dim:lstm层数
-output_dim:分类的个数
+nn.linear是针对最后一个dim来做的
 """
-class lstm_n(nn.Module):
+class bp_n(nn.Module):
     """Very simple implementation of LSTM-based time-series classifier."""
 
-    # num_layers – Number of recurrent layers. E.g., setting num_layers=2 would mean stacking two LSTMs
-    # batch_first – If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature).
     def __init__(self, configs=None):
         super().__init__()
-        self.input_dim = configs.d_model
-        self.hidden_dim = configs.d_model
-        self.layer_dim = configs.e_layers
-
-        # 注意这里设置了batch_first所以第一个维度是batch，lstm第二个input是输出的维度，第三个是lstm的层数
-        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.layer_dim, batch_first=True)
-
-
+        self.layer = configs.e_layers
+        self.bp = nn.ModuleList([nn.Linear(configs.d_model, configs.d_model) for _ in range(self.layer)])
 
     def forward(self, x):
-        # init_hidden并不是魔法函数，是每次循环时候手动执行更新的
-        h0, c0 = self.init_hidden(x)
-        out, (hn, cn) = self.lstm(x, (h0, c0))
-        # (N, L, D * H_{out})(N,L,D∗H_out) D代表的是direction，如果是双向lstm的话则d为2 else 1，L代表的是sequence
-        return out
+        for i in range(self.layer):
+            x = self.bp[i](x)
+        return x
 
-    def init_hidden(self, x):
-        # (lstm层的个数，batch_size,输出层的个数)
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        return [t.cuda() for t in (h0, c0)]
+
 
 
 
@@ -59,7 +42,7 @@ class Model(nn.Module):
         self.label_len = configs.label_len
         self.pred_len = configs.pred_len
         # e_layer这里是2，注意这里是用for的写法，所以time_block不是共享的参数
-        self.model = lstm_n(configs)
+        self.model = bp_n(configs)
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
