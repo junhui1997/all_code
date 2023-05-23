@@ -165,7 +165,6 @@ class Dataset_bone_drill_c(Dataset):
         self.args = args
         assert flag in ['TRAIN', 'TEST']
         self.flag = flag
-
         self.__read_data__()
 
     def __read_data__(self):
@@ -190,13 +189,24 @@ class Dataset_bone_drill_c(Dataset):
         # 这里也可以直接生成一个index list，只会对index list进行tran test split即可
         val_list = []
         label_list = []
+        file_list = []
         for i in range(self.seq_len, df.shape[0], self.seq_len):
             val = df.iloc[i - self.seq_len:i, :self.enc_in].to_numpy().astype('float64')
             label = df.iloc[i]['label']
+            file_name = df.iloc[i]['file_name']
             val_list.append(val)
             label_list.append(label)
-        df_clean = pd.DataFrame({"value list": val_list, "label": label_list})
-        x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
+            file_list.append(file_name)
+        df_clean = pd.DataFrame({"value list": val_list, "label": label_list, 'file_name': file_list})
+        split_mode = 'file'
+        # split_mode = 'single'
+        if split_mode == 'single':
+            x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
+        elif split_mode == 'file':
+            name_list = df_clean['file_name'].unique()
+            x_train = df_clean[df_clean['file_name'].isin(name_list[0:-1])]
+            # 这里记得改
+            x_test = df_clean[df_clean['file_name'].isin(name_list[-1:])]
         # 不drop的话还会保存原本的index并形成新的一列
         x_train = x_train.reset_index(drop=True)
         x_test = x_test.reset_index(drop=True)

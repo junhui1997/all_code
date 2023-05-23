@@ -102,3 +102,9 @@ accuracy:0.7699115044247787
 classification_bone_c_lstm_fcn_bone_drill_c_ftM_sl1000_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
 accuracy:0.7522123893805309
 
+classification_bone_c_lstm_fcn_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.8958333333333334
+
+classification_bone_c_lstm_fcn_bone_drill_c_ftM_sl400_ll48_pl96_dm64_nh8_el2_dl1_df64_fc1_ebtimeF_dtTrue_'Exp'_0  
+accuracy:0.6242038216560509
+
