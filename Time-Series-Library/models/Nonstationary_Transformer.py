@@ -10,11 +10,15 @@ class Projector(nn.Module):
     '''
     MLP to learn the De-stationary factors
     Paper link: https://openreview.net/pdf?id=ucNDIDRNjjv
+    input: x:[batch_size,seq_len,enc_in] stat:[]
+    out: [batch_size,out_dim] out_dim是预设好的，本例子中是tau:1, delat:seq_len
+    series_conv相当于是从seq_len那么多的通道数目，映射到1作为通道数目，dim上面维持了不变，所以这里提供了一个卷积层面上面做通道数目变化的方法
+    总体而言：projector从原始的序列输入上，为每一个batch计算出了一个在dim和seq层面共享的可学习参数，这是针对tau的，对于delta输出的维度是
     '''
 
     def __init__(self, enc_in, seq_len, hidden_dims, hidden_layers, output_dim, kernel_size=3):
         super(Projector, self).__init__()
-
+        # hidden_dims = [128,128]
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         self.series_conv = nn.Conv1d(in_channels=seq_len, out_channels=1, kernel_size=kernel_size, padding=padding,
                                      padding_mode='circular', bias=False)
@@ -27,6 +31,7 @@ class Projector(nn.Module):
         self.backbone = nn.Sequential(*layers)
 
     def forward(self, x, stats):
+        # 这里的e是enc_in
         # x:     B x S x E
         # stats: B x 1 x E
         # y:     B x O
@@ -112,9 +117,11 @@ class Model(nn.Module):
                                        output_dim=configs.seq_len)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        # 注意这里分离计算图的操作，还有提取出了数据的复制
         x_raw = x_enc.clone().detach()
 
         # Normalization
+        # mean和std都会从计算图上面分离出来
         mean_enc = x_enc.mean(1, keepdim=True).detach()  # B x 1 x E
         x_enc = x_enc - mean_enc
         std_enc = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5).detach()  # B x 1 x E
