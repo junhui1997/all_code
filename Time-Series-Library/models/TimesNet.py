@@ -88,6 +88,7 @@ class TimesBlock(nn.Module):
         # res [batch_size,seq_len+pred_len,d_model,k]
         res = torch.stack(res, dim=-1)
         # adaptive aggregation
+        # periond_weight[batch_size,k],上面生成的本来就是这个维度
         period_weight = F.softmax(period_weight, dim=1)
         # period_weight:[batch_size,seq_len+pred,d_model,k]
         period_weight = period_weight.unsqueeze(1).unsqueeze(1).repeat(1, T, N, 1)

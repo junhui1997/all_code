@@ -43,6 +43,7 @@ class Exp_Classification(Exp_Basic):
 
     def _select_optimizer(self):
         model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+        model_optim = optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
         return model_optim
 
     def _select_criterion(self):

@@ -199,14 +199,16 @@ class Dataset_bone_drill_c(Dataset):
             file_list.append(file_name)
         df_clean = pd.DataFrame({"value list": val_list, "label": label_list, 'file_name': file_list})
         split_mode = 'file'
-        # split_mode = 'single'
+        split_mode = 'single'
         if split_mode == 'single':
             x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
         elif split_mode == 'file':
             name_list = df_clean['file_name'].unique()
-            x_train = df_clean[df_clean['file_name'].isin(name_list[0:-1])]
+            # name_list = name_list[::4]
+            train_list, test_list = train_test_split(name_list, test_size=0.2, random_state=self.seed)
+            x_train = df_clean[df_clean['file_name'].isin(train_list)]
             # 这里记得改
-            x_test = df_clean[df_clean['file_name'].isin(name_list[-1:])]
+            x_test = df_clean[df_clean['file_name'].isin(test_list)]
         # 不drop的话还会保存原本的index并形成新的一列
         x_train = x_train.reset_index(drop=True)
         x_test = x_test.reset_index(drop=True)
