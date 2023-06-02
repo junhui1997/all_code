@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 from layers.Embed import DataEmbedding
-from layers.Conv_Blocks import Inception_Block_V1
+from layers.Conv_Blocks import Inception_Block_V1, Inception_Block_V2, Inception_Block_V3
 
 """
     对输入的时间序列 `x` 进行实数值 FFT 变换，并根据幅值选取前 k 个频率，计算时间序列的周期和幅值。
@@ -46,11 +46,12 @@ class TimesBlock(nn.Module):
         self.k = configs.top_k
         # parameter-efficient design
         # d_ff是卷积层的中间变量，因为使用了一个d_model->d_ff->d_model的变化
+        # num_kernels默认是6
         self.conv = nn.Sequential(
-            Inception_Block_V1(configs.d_model, configs.d_ff,
+            Inception_Block_V3(configs.d_model, configs.d_ff,
                                num_kernels=configs.num_kernels),
             nn.GELU(),
-            Inception_Block_V1(configs.d_ff, configs.d_model,
+            Inception_Block_V3(configs.d_ff, configs.d_model,
                                num_kernels=configs.num_kernels)
         )
 

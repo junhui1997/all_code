@@ -199,8 +199,9 @@ class Dataset_bone_drill_c(Dataset):
             file_list.append(file_name)
         df_clean = pd.DataFrame({"value list": val_list, "label": label_list, 'file_name': file_list})
         split_mode = 'file'
-        split_mode = 'single'
+        # split_mode = 'single'
         if split_mode == 'single':
+            df_clean = df_clean[::20]
             x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
         elif split_mode == 'file':
             name_list = df_clean['file_name'].unique()
