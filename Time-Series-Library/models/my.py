@@ -5,6 +5,16 @@ import torch.fft
 from layers.Embed import DataEmbedding
 from layers.block import lstm_n
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.fft
+from layers.Embed import DataEmbedding
+from layers.block import lstm_n
+from layers.Autoformer_EncDec import series_decomp
+from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
+from layers.SelfAttention_Family import ProbAttention, AttentionLayer, DSAttention, FullAttention
+
 
 
 
@@ -74,27 +84,70 @@ class fcn_n(nn.Module):
 class lstm_fcn_n(nn.Module):
     def __init__(self, configs):
         super(lstm_fcn_n, self).__init__()
+        kernel_size = configs.moving_avg
+        self.decomp = series_decomp(kernel_size)
         self.fcn = fcn_n(configs)
         self.lstm = lstm_n(configs)
+        self.lstm2 = lstm_n(configs)
         # self.cat_mode = 'dim'
         self.cat_mode = 'seq'
+        # self.cat_mode = 'none'
+        self.cat_mode = 'former'
         if self.cat_mode == 'dim':
             # concate on d_model dim
             self.linear = nn.Linear(configs.d_model * 2, configs.d_model)
-        else:
+        elif self.cat_mode == 'seq':
             self.linear = nn.Linear(configs.seq_len * 2, configs.seq_len)
+        elif self.cat_mode == 'former':
+            # Decoder
+            attn = 'prob'
+            if attn == 'full':
+                Attn = FullAttention
+            elif attn == 'prob':
+                Attn = ProbAttention
+            elif attn == 'dsa':
+                Attn = DSAttention
 
+            self.decoder = Decoder(
+                [
+                    DecoderLayer(
+                        AttentionLayer(
+                            Attn(True, configs.factor, attention_dropout=configs.dropout,
+                                          output_attention=False),
+                            configs.d_model, configs.n_heads),
+                        AttentionLayer(
+                            Attn(False, configs.factor, attention_dropout=configs.dropout,
+                                          output_attention=False),
+                            configs.d_model, configs.n_heads),
+                        configs.d_model,
+                        configs.d_ff,
+                        dropout=configs.dropout,
+                        activation=configs.activation,
+                    )
+                    for l in range(configs.d_layers)
+                ],
+                norm_layer=torch.nn.LayerNorm(configs.d_model),
+
+            )
     def forward(self, x):
-        x_fcn = self.fcn(x)
-        x_lstm = self.lstm(x)
+        # 两个lstm效果并不好接近0.74，使用lion后好一些
+        seasonal_init, trend_init = self.decomp(x)
+        x_fcn = self.fcn(seasonal_init)
+        x_lstm = self.lstm(trend_init)
+        # x_fcn = self.fcn(x)
+        # x_lstm = self.lstm(x)
         if self.cat_mode == 'dim':
             out = torch.cat((x_fcn, x_lstm), dim=2)
             out = self.linear(out)
-        else:
+        elif self.cat_mode == 'seq':
             out = torch.cat((x_fcn, x_lstm), dim=1)
             out = out.permute(0, 2, 1)
             out = self.linear(out)
             out = out.permute(0, 2, 1)
+        elif self.cat_mode == 'none':
+            out = x_fcn+x_lstm
+        elif self.cat_mode == 'former':
+            out = self.decoder(x_fcn, x_lstm, x_mask=None, cross_mask=None)
         return out
 
 class Model(nn.Module):

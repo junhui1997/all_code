@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 from layers.Embed import DataEmbedding
-from layers.Conv_Blocks import Inception_Block_V1
+from layers.block import lstm_n
 
 """
 input:【batch_size,seq_len,dim]
@@ -14,34 +14,7 @@ hidden_dim:输出线性层中的尺寸,也是lstm中d_model的尺寸
 layer_dim:lstm层数
 output_dim:分类的个数
 """
-class lstm_n(nn.Module):
-    """Very simple implementation of LSTM-based time-series classifier."""
 
-    # num_layers – Number of recurrent layers. E.g., setting num_layers=2 would mean stacking two LSTMs
-    # batch_first – If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature).
-    def __init__(self, configs=None):
-        super().__init__()
-        self.input_dim = configs.d_model
-        self.hidden_dim = configs.d_model
-        self.layer_dim = configs.e_layers
-
-        # 注意这里设置了batch_first所以第一个维度是batch，lstm第二个input是输出的维度，第三个是lstm的层数
-        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.layer_dim, batch_first=True)
-
-
-
-    def forward(self, x):
-        # init_hidden并不是魔法函数，是每次循环时候手动执行更新的
-        h0, c0 = self.init_hidden(x)
-        out, (hn, cn) = self.lstm(x, (h0, c0))
-        # (N, L, D * H_{out})(N,L,D∗H_out) D代表的是direction，如果是双向lstm的话则d为2 else 1，L代表的是sequence
-        return out
-
-    def init_hidden(self, x):
-        # (lstm层的个数，batch_size,输出层的个数)
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        return [t.cuda() for t in (h0, c0)]
 
 
 

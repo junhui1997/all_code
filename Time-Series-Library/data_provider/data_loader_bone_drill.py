@@ -204,9 +204,17 @@ class Dataset_bone_drill_c(Dataset):
             df_clean = df_clean[::20]
             x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
         elif split_mode == 'file':
-            name_list = df_clean['file_name'].unique()
+            k_fold = 3
+            name_list = list(df_clean['file_name'].unique())
+            if (self.seed+1)*k_fold >= len(name_list):
+                end = -1
+            else:
+                end = (self.seed+1)*k_fold
+            start = self.seed*k_fold
+            train_list = name_list[0:start]+name_list[end::]
+            test_list = name_list[start:end]
             # name_list = name_list[::4]
-            train_list, test_list = train_test_split(name_list, test_size=0.2, random_state=self.seed)
+            # train_list, test_list = train_test_split(name_list, test_size=0.2, random_state=self.seed)
             x_train = df_clean[df_clean['file_name'].isin(train_list)]
             # 这里记得改
             x_test = df_clean[df_clean['file_name'].isin(test_list)]

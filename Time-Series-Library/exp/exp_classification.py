@@ -8,6 +8,7 @@ import os
 import time
 import warnings
 import numpy as np
+from layers.Lion import Lion
 import pdb
 
 warnings.filterwarnings('ignore')
@@ -44,6 +45,7 @@ class Exp_Classification(Exp_Basic):
     def _select_optimizer(self):
         model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         model_optim = optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
+        model_optim = Lion(self.model.parameters(), lr=self.args.learning_rate, weight_decay=0.01)
         return model_optim
 
     def _select_criterion(self):

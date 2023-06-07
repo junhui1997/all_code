@@ -60,8 +60,8 @@ parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
 parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
 parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
 parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
-parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')
-parser.add_argument('--factor', type=int, default=1, help='attn factor')
+parser.add_argument('--moving_avg', type=int, default=3, help='window size of moving average')
+parser.add_argument('--factor', type=int, default=3, help='attn factor')
 parser.add_argument('--distil', action='store_false',
                     help='whether to use distilling in encoder, using this argument means not using distilling',
                     default=True)
@@ -92,7 +92,7 @@ parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids o
 # de-stationary projector params
 parser.add_argument('--p_hidden_dims', type=int, nargs='+', default=[128, 128],
                     help='hidden layer dimensions of projector (List)')
-parser.add_argument('--p_hidden_layers', type=int, default=2, help='number of hidden layers in projector')
+parser.add_argument('--p_hidden_layers', type=int, default=1, help='number of hidden layers in projector')
 parser.add_argument('--filter', type=str, default='no_filter', help='choose which filter for bone drill')
 
 args = parser.parse_args()
@@ -119,10 +119,11 @@ elif args.task_name == 'classification':
     Exp = Exp_Classification
 else:
     Exp = Exp_Long_Term_Forecast
-
+# random.seed()
 if args.is_training:
     for ii in range(args.itr):
-        args.seed = random.randint(0,4294967294)
+        args.seed = ii % 5  # 5fold cross validation
+        # print(args.seed)
         # setting record of experiments
         setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}_{}'.format(
             args.task_name,

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 from layers.Embed import DataEmbedding
+from layers.block import Block_1d, PermuteLayer, GRN_1d
 
 
 class ConvLayer(nn.Module):
@@ -25,17 +26,22 @@ class ConvLayer(nn.Module):
                                            stride=2,
                                            padding=padding,
                                            padding_mode='zeros')
-        self.norm = nn.LayerNorm(out_c)
+
+        # self.norm = nn.LayerNorm(out_c)
         # 和relu有细微差别
+        self.grn = GRN_1d(out_c)
         self.activation = nn.GELU()
 
     def forward(self, x):
+        # x:[B,S,C]
         # 这一步同样是为了对d_model进行卷积
-        x = self.Conv(x.permute(0, 2, 1))
-        x = self.norm(x)
+        x = x.permute(0, 2, 1)  # [B,C,S]
+        x = self.Conv(x)
+        x = x.permute(0, 2, 1)  # [B,S,C]
+        # x = self.norm(x)
         x = self.activation(x)
+        x = self.grn(x)
         # 交换回来第一步卷积交换过去的数值
-        x = x.transpose(1, 2)
         return x
 
 
@@ -50,6 +56,7 @@ class fcn_n(nn.Module):
              range(configs.e_layers)])
         # 这里的d_model_f是上采样的终点
         self.d_model_f = self.d_model * (2 ** configs.e_layers)
+        self.norm = nn.LayerNorm(self.d_model_f)
         self.up_sample = nn.ModuleList(
             [ConvLayer(self.d_model_f // (2 ** i), self.d_model_f // (2 ** (i + 1)), 'up') for i in
              range(configs.e_layers)])
@@ -57,6 +64,7 @@ class fcn_n(nn.Module):
     def forward(self, x):
         for i in range(self.e_layer):
             x = self.down_sample[i](x)
+        x = self.norm(x)
         for i in range(self.e_layer):
             x = self.up_sample[i](x)
         padding_type = 'zero'
@@ -93,7 +101,7 @@ class Model(nn.Module):
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
-        # self.enc_embedding_n = nn.Linear(configs.enc_in, configs.d_model)
+        self.enc_embedding_n = nn.Linear(configs.enc_in, configs.d_model)
         self.layer = configs.e_layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
@@ -136,7 +144,7 @@ class Model(nn.Module):
 
     def classification(self, x_enc, x_mark_enc):
         # embedding
-        enc_out = self.enc_embedding(x_enc)  # [B,T,C]
+        enc_out = self.enc_embedding_n(x_enc)  # [B,T,C]
         # enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]
         enc_out = self.model(enc_out)
 
@@ -167,3 +175,4 @@ class Model(nn.Module):
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
         return None
+
