@@ -3,16 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 from layers.Embed import DataEmbedding
-from layers.block import lstm_n
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.fft
-from layers.Embed import DataEmbedding
 from layers.block import lstm_n, fusion_layer
-from layers.Autoformer_EncDec import series_decomp
-
 
 
 
@@ -80,24 +71,16 @@ class fcn_n(nn.Module):
         x = torch.cat((x, padding_part), dim=1)
         return x
 
-
-
 class lstm_fcn_n(nn.Module):
     def __init__(self, configs):
         super(lstm_fcn_n, self).__init__()
-        kernel_size = configs.moving_avg
-        self.decomp = series_decomp(kernel_size)
         self.fcn = fcn_n(configs)
         self.lstm = lstm_n(configs)
-        self.fusion = fusion_layer(configs, 'none', 'prob')
+        self.fusion = fusion_layer(configs, 'seq', 'prob')
 
     def forward(self, x):
-        # 两个lstm效果并不好接近0.74，使用lion后好一些
-        seasonal_init, trend_init = self.decomp(x)
-        x_fcn = self.fcn(seasonal_init)
-        x_lstm = self.lstm(trend_init)
-        # x_fcn = self.fcn(x)
-        # x_lstm = self.lstm(x)
+        x_fcn = self.fcn(x)
+        x_lstm = self.lstm(x)
         out = self.fusion(x_fcn, x_lstm)
         return out
 
@@ -114,14 +97,9 @@ class Model(nn.Module):
         self.label_len = configs.label_len
         self.pred_len = configs.pred_len
         # e_layer这里是2，注意这里是用for的写法，所以time_block不是共享的参数
-        self.model1 = lstm_fcn_n(configs)
-        self.model2 = lstm_fcn_n(configs)
-        self.enc = configs.enc_in//2
-        self.fusion = fusion_layer(configs, 'former', 'prob')
+        self.model = lstm_fcn_n(configs)
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
-        self.enc_embedding_f = DataEmbedding(configs.enc_in//2, configs.d_model, configs.embed, configs.freq,
-                                           configs.dropout)
-        self.enc_embedding_p = DataEmbedding(configs.enc_in // 2, configs.d_model, configs.embed, configs.freq,
+        self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
         self.enc_embedding_n = nn.Linear(configs.enc_in, configs.d_model)
         self.layer = configs.e_layers
@@ -166,14 +144,10 @@ class Model(nn.Module):
 
     def classification(self, x_enc, x_mark_enc):
         # embedding
-        enc_f = x_enc[:, :, 0:self.enc]
-        enc_p = x_enc[:, :, self.enc::]
+        enc_out = self.enc_embedding_n(x_enc)  # [B,T,C]
+        # enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]
+        enc_out = self.model(enc_out)
 
-        enc_out_f = self.enc_embedding_p(enc_f, None)  # [B,T,C]
-        enc_out_f = self.model1(enc_out_f)
-        enc_out_p = self.enc_embedding_p(enc_p, None)  # [B,T,C]
-        enc_out_p = self.model2(enc_out_p)
-        enc_out = self.fusion(enc_out_f,enc_out_p)
         # Output
         # the output transformer encoder/decoder embeddings don't include non-linearity
         output = self.act(enc_out)

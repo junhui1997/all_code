@@ -176,8 +176,6 @@ class Dataset_bone_drill_c(Dataset):
         file_name = 'df_label.pkl'
         df = pd.read_pickle(drill_folder + file_name)
         df = df.drop(columns='time_stamp')
-        df = df[::2] # classifcaion
-        a = 1
         # normalizer = Normalizer()
         # df = normalizer.normalize(df)
         self.scaler.fit(df.iloc[:, :self.enc_in].values)
@@ -198,10 +196,11 @@ class Dataset_bone_drill_c(Dataset):
             label_list.append(label)
             file_list.append(file_name)
         df_clean = pd.DataFrame({"value list": val_list, "label": label_list, 'file_name': file_list})
+        df_clean = df_clean[::20]  # classifcaion
         split_mode = 'file'
         # split_mode = 'single'
         if split_mode == 'single':
-            df_clean = df_clean[::20]
+            df_clean = df_clean[::2]
             x_train, x_test = train_test_split(df_clean, test_size=0.2, random_state=self.seed)
         elif split_mode == 'file':
             k_fold = 3

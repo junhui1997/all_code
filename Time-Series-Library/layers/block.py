@@ -2,10 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.layers import trunc_normal_, DropPath
+from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
+from layers.SelfAttention_Family import ProbAttention, AttentionLayer, DSAttention, FullAttention
+
 
 class GRN(nn.Module):
     """ GRN (Global Response Normalization) layer
     """
+
     def __init__(self, dim):
         super().__init__()
         self.gamma = nn.Parameter(torch.zeros(1, 1, 1, dim))
@@ -13,13 +17,15 @@ class GRN(nn.Module):
 
     def forward(self, x):
         # L2正则：主要用来防止模型过拟合，直观上理解就是L2正则化是对于大数值的权重向量进行严厉惩罚。鼓励参数是较小值
-        Gx = torch.norm(x, p=2, dim=(1,2), keepdim=True)
+        Gx = torch.norm(x, p=2, dim=(1, 2), keepdim=True)
         Nx = Gx / (Gx.mean(dim=-1, keepdim=True) + 1e-6)
         return self.gamma * (x * Nx) + self.beta + x
+
 
 class GRN_1d(nn.Module):
     """ GRN (Global Response Normalization) layer
     """
+
     def __init__(self, dim):
         super().__init__()
         self.gamma = nn.Parameter(torch.zeros(1, 1, dim))
@@ -30,6 +36,8 @@ class GRN_1d(nn.Module):
         Gx = torch.norm(x, p=2, dim=(1), keepdim=True)
         Nx = Gx / (Gx.mean(dim=-1, keepdim=True) + 1e-6)
         return self.gamma * (x * Nx) + self.beta + x
+
+
 class Block(nn.Module):
     """ ConvNeXtV2 Block.
 
@@ -61,6 +69,7 @@ class Block(nn.Module):
 
         x = input + self.drop_path(x)
         return x
+
 
 # block1d的输入和输出都是[batch_size,num_channel,seq_len]这种类似于图像的写法
 class Block_1d(nn.Module):
@@ -115,6 +124,8 @@ hidden_dim:输出线性层中的尺寸,也是lstm中d_model的尺寸
 layer_dim:lstm层数
 output_dim:分类的个数
 """
+
+
 class lstm_n(nn.Module):
     """Very simple implementation of LSTM-based time-series classifier."""
 
@@ -141,3 +152,60 @@ class lstm_n(nn.Module):
         h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
         c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
         return [t.cuda() for t in (h0, c0)]
+
+
+class fusion_layer(nn.Module):
+    def __init__(self, configs, cat_mode='none', attn='prob'):
+        super(fusion_layer, self).__init__()
+        self.cat_mode = cat_mode
+        if self.cat_mode == 'dim':
+            # concate on d_model dim
+            self.linear = nn.Linear(configs.d_model * 2, configs.d_model)
+        elif self.cat_mode == 'seq':
+            self.linear = nn.Linear(configs.seq_len * 2, configs.seq_len)
+        elif self.cat_mode == 'former':
+            # Decoder
+            attn = 'prob'
+            if attn == 'full':
+                Attn = FullAttention
+            elif attn == 'prob':
+                Attn = ProbAttention
+            elif attn == 'dsa':
+                Attn = DSAttention
+
+            self.decoder = Decoder(
+                [
+                    DecoderLayer(
+                        AttentionLayer(
+                            Attn(True, configs.factor, attention_dropout=configs.dropout,
+                                 output_attention=False),
+                            configs.d_model, configs.n_heads),
+                        AttentionLayer(
+                            Attn(False, configs.factor, attention_dropout=configs.dropout,
+                                 output_attention=False),
+                            configs.d_model, configs.n_heads),
+                        configs.d_model,
+                        configs.d_ff,
+                        dropout=configs.dropout,
+                        activation=configs.activation,
+                    )
+                    for l in range(configs.d_layers)
+                ],
+                norm_layer=torch.nn.LayerNorm(configs.d_model),
+
+            )
+
+    def forward(self, x1, x2):
+        if self.cat_mode == 'dim':
+            out = torch.cat((x1, x2), dim=2)
+            out = self.linear(out)
+        elif self.cat_mode == 'seq':
+            out = torch.cat((x1, x2), dim=1)
+            out = out.permute(0, 2, 1)
+            out = self.linear(out)
+            out = out.permute(0, 2, 1)
+        elif self.cat_mode == 'none':
+            out = x1 + x2
+        elif self.cat_mode == 'former':
+            out = self.decoder(x1, x2, x_mask=None, cross_mask=None)
+        return out
