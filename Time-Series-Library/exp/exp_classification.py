@@ -51,10 +51,11 @@ class Exp_Classification(Exp_Basic):
 
     def _select_scheduler(self, optimizer):
         if self.args.lradj == 'type3':
-            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=8, eta_min=0.00001)
+            # T_max是半个周期的长度，也就是从最大值到最小值需要用的时长
+            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=3, eta_min=0.0001)
         elif self.args.lradj == 'type4':
             # patience = 2,代表的是3次val 没有下降后开始降低learning rate
-            scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.8, patience=1)
+            scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.8, patience=5)
         else:
             scheduler = None
         return scheduler
