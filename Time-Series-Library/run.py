@@ -122,11 +122,11 @@ else:
 
 if args.is_training:
     for ii in range(args.itr):
+        random.seed()
         args.seed = ii % 5  # 5fold cross validation
         # if ii < 3:
         #     continue
-        args.seed = ii % 5  # 5fold cross validation
-        args.seed = 0  # always use the first fold
+        # args.seed = 0  # always use the first fold
         # print(args.seed)
         # setting record of experiments
         setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}_{}'.format(
