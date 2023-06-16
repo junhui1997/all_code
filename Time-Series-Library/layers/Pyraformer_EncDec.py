@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.linear import Linear
-from layers.SelfAttention_Family import AttentionLayer, FullAttention
+from layers.SelfAttention_Family import AttentionLayer, FullAttention, ProbAttention
 from layers.Embed import DataEmbedding
 import math
 
@@ -81,9 +81,10 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner, n_head, dropout=0.1, normalize_before=True):
         super(EncoderLayer, self).__init__()
-
+        attn = ProbAttention
+        # attn = FullAttention
         self.slf_attn = AttentionLayer(
-            FullAttention(mask_flag=True, factor=0,
+            attn(mask_flag=True, factor=3,
                           attention_dropout=dropout, output_attention=False),
             d_model, n_head)
         self.pos_ffn = PositionwiseFeedForward(

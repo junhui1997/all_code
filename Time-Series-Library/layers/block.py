@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from timm.models.layers import trunc_normal_, DropPath
 from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
 from layers.SelfAttention_Family import ProbAttention, AttentionLayer, DSAttention, FullAttention
+from layers.FourierCorrelation import FourierCrossAttention
 
 
 class GRN(nn.Module):
@@ -154,6 +155,20 @@ class lstm_n(nn.Module):
         return [t.cuda() for t in (h0, c0)]
 
 
+class WeightedSum(nn.Module):
+    def __init__(self, seq_len, d_model):
+        super(WeightedSum, self).__init__()
+        self.weights = nn.Parameter(torch.rand(1, seq_len, d_model))
+        nn.init.xavier_uniform_(self.weights)
+
+    def forward(self, tensor1, tensor2):
+        # 归一化权重
+        normalized_weights = torch.softmax(self.weights, dim=1)
+
+        # 计算加权和
+        weighted_sum = normalized_weights * tensor1 + (1 - normalized_weights) * tensor2
+        return weighted_sum
+
 class fusion_layer(nn.Module):
     def __init__(self, configs, cat_mode='none', attn='prob'):
         super(fusion_layer, self).__init__()
@@ -163,26 +178,33 @@ class fusion_layer(nn.Module):
             self.linear = nn.Linear(configs.d_model * 2, configs.d_model)
         elif self.cat_mode == 'seq':
             self.linear = nn.Linear(configs.seq_len * 2, configs.seq_len)
+        elif self.cat_mode == 'weight_sum':
+            self.weighted_sum = WeightedSum(configs.seq_len, configs.d_model)
         elif self.cat_mode == 'former':
             # Decoder
             attn = 'prob'
             if attn == 'full':
-                Attn = FullAttention
+                Attn = FullAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False)
             elif attn == 'prob':
-                Attn = ProbAttention
+                Attn = ProbAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False)
             elif attn == 'dsa':
-                Attn = DSAttention
+                Attn = DSAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False)
+            elif attn == 'fourier':
+                Attn = FourierCrossAttention(in_channels=configs.d_model,
+                                      out_channels=configs.d_model,
+                                      seq_len_q=configs.seq_len,
+                                      seq_len_kv=configs.seq_len,
+                                      modes=64,
+                                      mode_select_method='random')
 
             self.decoder = Decoder(
                 [
                     DecoderLayer(
                         AttentionLayer(
-                            Attn(True, configs.factor, attention_dropout=configs.dropout,
-                                 output_attention=False),
+                            Attn,
                             configs.d_model, configs.n_heads),
                         AttentionLayer(
-                            Attn(False, configs.factor, attention_dropout=configs.dropout,
-                                 output_attention=False),
+                            Attn,
                             configs.d_model, configs.n_heads),
                         configs.d_model,
                         configs.d_ff,
@@ -204,6 +226,8 @@ class fusion_layer(nn.Module):
             out = out.permute(0, 2, 1)
             out = self.linear(out)
             out = out.permute(0, 2, 1)
+        elif self.cat_mode == 'weight_sum':
+            out = self.weighted_sum(x1, x2)
         elif self.cat_mode == 'none':
             out = x1 + x2
         elif self.cat_mode == 'former':

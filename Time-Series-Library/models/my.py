@@ -87,9 +87,9 @@ class lstm_fcn_n(nn.Module):
         super(lstm_fcn_n, self).__init__()
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
-        self.fcn = fcn_n(configs)
+        self.fcn = lstm_n(configs)
         self.lstm = lstm_n(configs)
-        self.fusion = fusion_layer(configs, 'none', 'prob')
+        self.fusion = fusion_layer(configs, 'weight_sum', 'prob')
 
     def forward(self, x):
         # 两个lstm效果并不好接近0.74，使用lion后好一些
@@ -117,7 +117,7 @@ class Model(nn.Module):
         self.model1 = lstm_fcn_n(configs)
         self.model2 = lstm_fcn_n(configs)
         self.enc = configs.enc_in//2
-        self.fusion = fusion_layer(configs, 'former', 'prob')
+        self.fusion = fusion_layer(configs, 'former', 'fourier')
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding_f = DataEmbedding(configs.enc_in//2, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)

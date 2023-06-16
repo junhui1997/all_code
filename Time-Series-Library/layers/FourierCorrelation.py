@@ -12,6 +12,7 @@ def get_frequency_modes(seq_len, modes=64, mode_select_method='random'):
     get modes on frequency domain:
     'random' means sampling randomly;
     'else' means sampling the lowest modes;
+    这里是采样了其中的一半频率
     """
     modes = min(modes, seq_len // 2)
     if mode_select_method == 'random':
