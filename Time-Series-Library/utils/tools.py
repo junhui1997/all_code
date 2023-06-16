@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
 
-def adjust_learning_rate(optimizer, epoch, args):
+def adjust_learning_rate(optimizer, epoch, args, scheduler=None, val_loss=0):
     # lr = args.learning_rate * (0.2 ** (epoch // 2))
     if args.lradj == 'type1':
         lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
@@ -15,6 +15,20 @@ def adjust_learning_rate(optimizer, epoch, args):
             2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
             10: 5e-7, 15: 1e-7, 20: 5e-8
         }
+    elif args.lradj == 'type3':
+        lr_prev = optimizer.param_groups[0]['lr']
+        scheduler.step()
+        lr = optimizer.param_groups[0]['lr']
+        if lr != lr_prev:
+            print('Updating learning rate to {}'.format(lr))
+        return
+    elif args.lradj == 'type4':
+        lr_prev = optimizer.param_groups[0]['lr']
+        scheduler.step(val_loss)
+        lr = optimizer.param_groups[0]['lr']
+        if lr != lr_prev:
+            print('Updating learning rate to {}'.format(lr))
+        return
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
         for param_group in optimizer.param_groups:

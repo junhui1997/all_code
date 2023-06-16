@@ -5,6 +5,7 @@ from timm.models.layers import trunc_normal_, DropPath
 from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
 from layers.SelfAttention_Family import ProbAttention, AttentionLayer, DSAttention, FullAttention
 from layers.FourierCorrelation import FourierCrossAttention
+from layers.MultiWaveletCorrelation import MultiWaveletCross
 
 
 class GRN(nn.Module):
@@ -173,6 +174,7 @@ class fusion_layer(nn.Module):
     def __init__(self, configs, cat_mode='none', attn='prob'):
         super(fusion_layer, self).__init__()
         self.cat_mode = cat_mode
+        self.modes = 32
         if self.cat_mode == 'dim':
             # concate on d_model dim
             self.linear = nn.Linear(configs.d_model * 2, configs.d_model)
@@ -194,9 +196,17 @@ class fusion_layer(nn.Module):
                                       out_channels=configs.d_model,
                                       seq_len_q=configs.seq_len,
                                       seq_len_kv=configs.seq_len,
-                                      modes=64,
+                                      modes=self.modes,
                                       mode_select_method='random')
-
+            elif attn == 'wavelet':
+                Attn = MultiWaveletCross(in_channels=configs.d_model,
+                                                  out_channels=configs.d_model,
+                                                  seq_len_q=configs.seq_len ,
+                                                  seq_len_kv=configs.seq_len,
+                                                  modes=self.modes,
+                                                  ich=configs.d_model,
+                                                  base='legendre',
+                                                  activation='tanh')
             self.decoder = Decoder(
                 [
                     DecoderLayer(

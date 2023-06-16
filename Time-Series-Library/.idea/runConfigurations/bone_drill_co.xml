@@ -13,7 +13,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run.py" />
-    <option name="PARAMETERS" value="--task_name classification    --is_training 1    --root_path ./    --model_id bone_c   --data bone_drill_c      --batch_size 16    --d_model 64    --d_ff 64    --top_k 3    --des 'Exp'    --itr 10    --learning_rate 0.0001    --train_epochs 30   --e_layers 2 --d_layers 1 --enc_in 12 --patience 10 --seq_len 500 --filter mean --model my" />
+    <option name="PARAMETERS" value="--task_name classification    --is_training 1    --root_path ./    --model_id bone_c   --data bone_drill_c      --batch_size 16    --d_model 64    --d_ff 64    --top_k 3    --des 'Exp'    --itr 10    --learning_rate 0.001    --train_epochs 30   --e_layers 2 --d_layers 1 --enc_in 12 --patience 10 --seq_len 500 --filter mean --model my" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

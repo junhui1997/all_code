@@ -9,6 +9,7 @@ import time
 import warnings
 import numpy as np
 from layers.Lion import Lion
+import torch.optim.lr_scheduler as lr_scheduler
 import pdb
 
 warnings.filterwarnings('ignore')
@@ -45,8 +46,18 @@ class Exp_Classification(Exp_Basic):
     def _select_optimizer(self):
         model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         model_optim = optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
-        model_optim = Lion(self.model.parameters(), lr=self.args.learning_rate, weight_decay=0.01)
+        model_optim = Lion(self.model.parameters(), lr=self.args.learning_rate, weight_decay=0.1)
         return model_optim
+
+    def _select_scheduler(self, optimizer):
+        if self.args.lradj == 'type3':
+            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=8, eta_min=0.00001)
+        elif self.args.lradj == 'type4':
+            # patience = 2,代表的是3次val 没有下降后开始降低learning rate
+            scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.8, patience=1)
+        else:
+            scheduler = None
+        return scheduler
 
     def _select_criterion(self):
         criterion = nn.CrossEntropyLoss()
@@ -100,6 +111,7 @@ class Exp_Classification(Exp_Basic):
         early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
 
         model_optim = self._select_optimizer()
+        scheduler = self._select_scheduler(model_optim)
         criterion = self._select_criterion()
 
         for epoch in range(self.args.train_epochs):
@@ -144,8 +156,9 @@ class Exp_Classification(Exp_Basic):
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
-            if (epoch + 1) % 5 == 0:
-                adjust_learning_rate(model_optim, epoch + 1, self.args)
+            # type 1,2时候是每隔固定周期调整一次，type 3,4时候是每个周期调整一次
+            if (epoch + 1) % 5 == 0 or self.args.lradj == 'type3' or self.args.lradj == 'type4':
+                adjust_learning_rate(model_optim, epoch + 1, self.args, scheduler, vali_loss)
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))

@@ -80,7 +80,7 @@ parser.add_argument('--patience', type=int, default=3, help='early stopping pati
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--des', type=str, default='test', help='exp description')
 parser.add_argument('--loss', type=str, default='MSE', help='loss function')
-parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
+parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
 # GPU
@@ -119,12 +119,14 @@ elif args.task_name == 'classification':
     Exp = Exp_Classification
 else:
     Exp = Exp_Long_Term_Forecast
-# random.seed()
+
 if args.is_training:
     for ii in range(args.itr):
+        args.seed = ii % 5  # 5fold cross validation
         # if ii < 3:
         #     continue
         args.seed = ii % 5  # 5fold cross validation
+        args.seed = 0  # always use the first fold
         # print(args.seed)
         # setting record of experiments
         setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}_{}'.format(
