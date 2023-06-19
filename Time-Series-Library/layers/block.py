@@ -246,7 +246,7 @@ class fusion_layer(nn.Module):
 
 class ConvLayer_m(nn.Module):
     def __init__(self, in_c, out_c, conv='down'):
-        super(ConvLayer, self).__init__()
+        super(ConvLayer_m, self).__init__()
         # 这里应该是由于api版本的不同，想要维持卷积完后的形状不同需要进行的操作
         padding = 1 if torch.__version__ >= '1.5.0' else 2
         # 保持channel的维度不变,此时的cin是d_model

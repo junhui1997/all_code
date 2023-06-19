@@ -1993,3 +1993,6 @@ accuracy:0.6643086816720257
 classification_bone_c_fcn_m_bone_drill_c_ftM_sl500_ll48_pl0_dm64_nh8_el2_dl1_df64_fc3_ebtimeF_dtTrue_'Exp'_mean_3  
 accuracy:0.6405622489959839
 
+classification_bone_c_fcn_m_bone_drill_c_ftM_sl500_ll48_pl0_dm64_nh8_el2_dl1_df64_fc3_ebtimeF_dtTrue_'Exp'_mean_4  
+accuracy:0.7742782152230971
+
