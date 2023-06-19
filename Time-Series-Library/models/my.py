@@ -12,7 +12,7 @@ import torch.fft
 from layers.Embed import DataEmbedding
 from layers.block import lstm_n, fusion_layer
 from layers.Autoformer_EncDec import series_decomp
-
+from models.fcn_m import fcn_mn
 
 
 
@@ -87,7 +87,7 @@ class lstm_fcn_n(nn.Module):
         super(lstm_fcn_n, self).__init__()
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
-        self.fcn = lstm_n(configs)
+        self.fcn = fcn_mn(configs)
         self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', 'prob')
 

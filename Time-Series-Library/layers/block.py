@@ -243,3 +243,37 @@ class fusion_layer(nn.Module):
         elif self.cat_mode == 'former':
             out = self.decoder(x1, x2, x_mask=None, cross_mask=None)
         return out
+
+class ConvLayer_m(nn.Module):
+    def __init__(self, in_c, out_c, conv='down'):
+        super(ConvLayer, self).__init__()
+        # 这里应该是由于api版本的不同，想要维持卷积完后的形状不同需要进行的操作
+        padding = 1 if torch.__version__ >= '1.5.0' else 2
+        # 保持channel的维度不变,此时的cin是d_model
+        if conv == 'down':
+            self.Conv = nn.Conv1d(in_channels=in_c,
+                                  out_channels=out_c,
+                                  kernel_size=3,
+                                  stride=2,
+                                  padding=padding,
+                                  padding_mode='circular')
+        else:
+            self.Conv = nn.ConvTranspose1d(in_channels=in_c,
+                                           out_channels=out_c,
+                                           kernel_size=3,
+                                           stride=2,
+                                           padding=padding,
+                                           padding_mode='zeros')
+
+        # 和relu有细微差别
+        self.activation = nn.GELU()
+
+    def forward(self, x):
+        # x:[B,S,C]
+        # 这一步同样是为了对d_model进行卷积
+        x = x.permute(0, 2, 1)  # [B,C,S]
+        x = self.Conv(x)
+        x = x.permute(0, 2, 1)  # [B,S,C]
+        x = self.activation(x)
+        # 交换回来第一步卷积交换过去的数值
+        return x
