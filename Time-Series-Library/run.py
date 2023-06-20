@@ -122,7 +122,7 @@ else:
 
 if args.is_training:
     for ii in range(args.itr):
-        random.seed()
+        # random.seed()
         args.seed = ii % 5  # 5fold cross validation
         # if ii < 3:
         #     continue

@@ -25,14 +25,18 @@ class fcn_mn(nn.Module):
         self.up_sample = nn.ModuleList(
             [ConvLayer_m(self.d_model_f // (2 ** i), self.d_model_f // (2 ** (i + 1)), 'up') for i in
              range(configs.e_layers)])
-
+        self.norm2 = nn.LayerNorm(self.d_model)
+        self.grn2 = GRN_1d(self.d_model)
     def forward(self, x):
+        inp = x
         for i in range(self.e_layer):
             x = self.down_sample[i](x)
-        x = self.norm(x)
         x = self.grn(x)
+        x = self.norm(x)
         for i in range(self.e_layer):
             x = self.up_sample[i](x)
+        # x = self.grn2(x)
+        # x = self.norm2(x)
         padding_type = 'zero'
         padding_type = 'interpolate'
         if padding_type == 'zero':
@@ -46,13 +50,13 @@ class fcn_mn(nn.Module):
             x = x.permute(0, 2, 1)
             x = F.interpolate(x, size=[self.seq_len], mode='linear')
             x = x.permute(0, 2, 1)
+        x = x+inp
         return x
-
 
 
 class Model(nn.Module):
     """
-    Paper link: https://openreview.net/pdf?id=ju_Uqw384Oq
+    ...
     """
 
     def __init__(self, configs):
