@@ -90,15 +90,18 @@ class lstm_fcn_n(nn.Module):
         self.fcn = fcn_mn(configs)
         self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', 'prob')
+        self.norm = nn.LayerNorm(configs.d_model)
 
     def forward(self, x):
         # 两个lstm效果并不好接近0.74，使用lion后好一些
         seasonal_init, trend_init = self.decomp(x)
         x_fcn = self.fcn(seasonal_init)
         x_lstm = self.lstm(trend_init)
+        # x_lstm = self.norm(x_lstm)
         # x_fcn = self.fcn(x)
         # x_lstm = self.lstm(x)
         out = self.fusion(x_fcn, x_lstm)
+        out = x+out
         return out
 
 class Model(nn.Module):
