@@ -3,6 +3,8 @@ for model_name in my
 do
 for seq_len in 500
 do
+for moving_avg in 5 25 50 100
+do
   for e_layers in 1 2
 do
   for d_layers in 1
