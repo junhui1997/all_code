@@ -101,7 +101,6 @@ class lstm_fcn_n(nn.Module):
         # x_fcn = self.fcn(x)
         # x_lstm = self.lstm(x)
         out = self.fusion(x_fcn, x_lstm)
-        out = x+out
         return out
 
 class Model(nn.Module):

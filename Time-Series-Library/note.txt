@@ -1,0 +1,2 @@
+621 without residual add in lstm_fcn block
+625 add residual blovk in lstm_fcn block,result is worse
