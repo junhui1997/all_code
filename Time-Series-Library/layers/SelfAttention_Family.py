@@ -205,8 +205,8 @@ class AttentionLayer(nn.Module):
             keys,
             values,
             attn_mask,
-            tau=tau,
-            delta=delta
+            # tau=tau,
+            # delta=delta
         )
         out = out.view(B, L, -1)
 

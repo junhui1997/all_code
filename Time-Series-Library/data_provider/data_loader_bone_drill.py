@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from data_provider.uea import subsample, interpolate_missing, Normalizer
 
 # 设计二阶巴特沃斯低通滤波器
+# 较低的采样率和截止频率可以滤除高频噪声，但可能会导致信号失真或频率损失。较高的采样率和截止频率可以更好地保留高频信号，但会增加计算复杂度和资源需求。
 def butter_lowpass_filter(data, cutoff, fs, order=2):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq

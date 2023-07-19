@@ -9,7 +9,11 @@ import time
 import warnings
 import numpy as np
 from layers.Lion import Lion
+from sklearn.metrics import confusion_matrix
 import torch.optim.lr_scheduler as lr_scheduler
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
 import pdb
 
 warnings.filterwarnings('ignore')
@@ -18,6 +22,7 @@ warnings.filterwarnings('ignore')
 class Exp_Classification(Exp_Basic):
     def __init__(self, args):
         super(Exp_Classification, self).__init__(args)
+
 
     def _build_model(self):
         data_dic = {'bone_drill_c': {'num_classes': 3}}
@@ -149,10 +154,11 @@ class Exp_Classification(Exp_Basic):
             train_loss = np.average(train_loss)
             vali_loss, val_accuracy = self.vali(vali_data, vali_loader, criterion)
             test_loss, test_accuracy = self.vali(test_data, test_loader, criterion)
-
             print(
                 "Epoch: {0}, Steps: {1} | Train Loss: {2:.3f} Vali Loss: {3:.3f} Vali Acc: {4:.3f} Test Loss: {5:.3f} Test Acc: {6:.3f}"
                     .format(epoch + 1, train_steps, train_loss, vali_loss, val_accuracy, test_loss, test_accuracy))
+
+
             early_stopping(-val_accuracy, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -178,6 +184,7 @@ class Exp_Classification(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
+        time_now = time.time()
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, label, padding_mask) in enumerate(test_loader):
@@ -190,6 +197,9 @@ class Exp_Classification(Exp_Basic):
                 preds.append(outputs.detach())
                 trues.append(label)
 
+        # check inference time
+        duration = time.time() -time_now
+        print('total time ', duration, duration/len(test_data))
         preds = torch.cat(preds, 0)
         trues = torch.cat(trues, 0)
         # print('test shape:', preds.shape, trues.shape)
@@ -202,7 +212,18 @@ class Exp_Classification(Exp_Basic):
         # result save
         folder_path = './results/' + setting + '/'
         if not os.path.exists(folder_path):
+            print('recording res')
             os.makedirs(folder_path)
+        cf_matrix = confusion_matrix(predictions, trues)
+        cm_normalized = cf_matrix.astype('float') / cf_matrix.sum(axis=1)[:, np.newaxis]
+        df = pd.DataFrame(cm_normalized, index=['None', 'CTB', 'CCB'], columns=['None', 'CTB', 'CCB'])
+        df.to_pickle(folder_path + 'confusion_m.pkl')
+        sns.heatmap(df, annot=True,  cmap="YlGnBu", vmax=1, fmt="g")  # cbar=None,
+        # plt.title("Confusion Matrix"), plt.tight_layout()
+        # plt.xlabel("True Class"),
+        # plt.ylabel("Predicted Class")
+        plt.savefig(folder_path + 'confusion_matrix.png')
+        plt.clf()
 
         print('accuracy:{}'.format(accuracy))
         f = open("result_classification.txt", 'a')

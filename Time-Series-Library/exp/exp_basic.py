@@ -1,5 +1,6 @@
 import os
 import torch
+from torchinfo import summary as summary_info
 from models import Autoformer, Transformer, TimesNet, Nonstationary_Transformer, DLinear, FEDformer, \
     Informer, LightTS, Reformer, ETSformer, Pyraformer, PatchTST, MICN, Crossformer, lstm, conv_net, bp, lstm_fcn, fcn, fcn_m, convnext1d, my, sinc_net
 
@@ -35,6 +36,16 @@ class Exp_Basic(object):
         }
         self.device = self._acquire_device()
         self.model = self._build_model().to(self.device)
+        show_para = 0
+        if args.task_name == 'classification' and show_para:
+            # 这里快速写出来的方法是直接看一看正常输入时候的shape，根据这个shape去生成不同的input，input最后是写在一个元祖里面去的，但是有一点点不同就是为了计算最后所占用的容量，不能用None，所以需要随机给生成一些
+            inputs = (torch.randn(args.batch_size, args.seq_len, args.enc_in), torch.randn(args.batch_size, args.seq_len), torch.randn(args.batch_size, args.seq_len, args.enc_in), torch.randn(args.batch_size, args.seq_len))
+            summary_info(
+                self.model,
+                input_data= inputs,
+                col_names=["output_size", "num_params"],
+            )
+            useless = 0
 
     def _build_model(self):
         raise NotImplementedError

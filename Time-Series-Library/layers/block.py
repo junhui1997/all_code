@@ -184,7 +184,6 @@ class fusion_layer(nn.Module):
             self.weighted_sum = WeightedSum(configs.seq_len, configs.d_model)
         elif self.cat_mode == 'former':
             # Decoder
-            attn = 'prob'
             if attn == 'full':
                 Attn = FullAttention(True, configs.factor, attention_dropout=configs.dropout, output_attention=False)
             elif attn == 'prob':

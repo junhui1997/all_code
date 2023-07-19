@@ -119,7 +119,7 @@ class Model(nn.Module):
         self.model1 = lstm_fcn_n(configs)
         self.model2 = lstm_fcn_n(configs)
         self.enc = configs.enc_in//2
-        self.fusion = fusion_layer(configs, 'former', 'prob')
+        self.fusion = fusion_layer(configs, 'former', 'full')
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding_f = DataEmbedding(configs.enc_in//2, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
