@@ -180,6 +180,13 @@ class fusion_layer(nn.Module):
             self.linear = nn.Linear(configs.d_model * 2, configs.d_model)
         elif self.cat_mode == 'seq':
             self.linear = nn.Linear(configs.seq_len * 2, configs.seq_len)
+        elif self.cat_mode == 'seq_c':
+            if configs.seq_len % (2**configs.e_layers) == 0:
+                factor = 0
+            else:
+                factor = 1
+            seq_len = configs.seq_len//(2**configs.e_layers)+factor
+            self.linear = nn.Linear(seq_len * 2, seq_len)
         elif self.cat_mode == 'weight_sum':
             self.weighted_sum = WeightedSum(configs.seq_len, configs.d_model)
         elif self.cat_mode == 'former':
@@ -230,7 +237,7 @@ class fusion_layer(nn.Module):
         if self.cat_mode == 'dim':
             out = torch.cat((x1, x2), dim=2)
             out = self.linear(out)
-        elif self.cat_mode == 'seq':
+        elif self.cat_mode == 'seq' or self.cat_mode == 'seq_c':
             out = torch.cat((x1, x2), dim=1)
             out = out.permute(0, 2, 1)
             out = self.linear(out)

@@ -2,7 +2,7 @@ import os
 import torch
 from torchinfo import summary as summary_info
 from models import Autoformer, Transformer, TimesNet, Nonstationary_Transformer, DLinear, FEDformer, \
-    Informer, LightTS, Reformer, ETSformer, Pyraformer, PatchTST, MICN, Crossformer, lstm, conv_net, bp, lstm_fcn, fcn, fcn_m, convnext1d, my, sinc_net
+    Informer, LightTS, Reformer, ETSformer, Pyraformer, PatchTST, MICN, Crossformer, lstm, conv_net, bp, lstm_fcn, fcn, fcn_m, convnext1d, my, sinc_net,consinc_net
 
 
 class Exp_Basic(object):
@@ -31,7 +31,9 @@ class Exp_Basic(object):
             'fcn_m': fcn_m,
             'conv_next': convnext1d,
             'my': my,
-            'sinc_net':sinc_net
+            'sinc_net':sinc_net,
+            'consinc_net': consinc_net
+
 
         }
         self.device = self._acquire_device()
