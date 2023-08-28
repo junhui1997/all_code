@@ -87,10 +87,8 @@ class lstm_fcn_n(nn.Module):
         super(lstm_fcn_n, self).__init__()
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
-        # self.fcn = fcn_mn(configs)
-        # self.lstm = lstm_n(configs)
         self.fcn = fcn_mn(configs)
-        self.lstm = fcn_mn(configs)
+        self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', 'prob')
         self.norm = nn.LayerNorm(configs.d_model)
 
@@ -121,7 +119,7 @@ class Model(nn.Module):
         self.model1 = lstm_fcn_n(configs)
         self.model2 = lstm_fcn_n(configs)
         self.enc = configs.enc_in//2
-        self.fusion = fusion_layer(configs, 'former', 'full')
+        self.fusion = fusion_layer(configs, 'former', 'prob')
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding_f = DataEmbedding(configs.enc_in//2, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
@@ -205,3 +203,4 @@ class Model(nn.Module):
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
         return None
+
