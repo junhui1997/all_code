@@ -26,6 +26,7 @@ data_loader = torch.utils.data.DataLoader(imagenet_data,
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dim_mults = (1, 2, 4,)
 
+# 这里的U-net有点不同，带了时间嵌入信息
 denoise_model = Unet(
     dim=image_size,
     channels=channels,

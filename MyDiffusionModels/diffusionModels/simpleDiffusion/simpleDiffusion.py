@@ -58,6 +58,7 @@ class DiffusionModel(nn.Module):
         if noise is None:
             noise = torch.randn_like(x_start)
 
+        # x_noisy是前向注入噪声之后的image，predicted_noisy是消除噪声之后的image
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         predicted_noise = self.denoise_model(x_noisy, t)
 

@@ -157,7 +157,7 @@ class SimpleDiffusionTrainer(TrainerBase):
                 batch_size = features.shape[0]
 
                 # Algorithm 1 line 3: sample t uniformally for every example in the batch
-                # 在0~time_step间进行随机采样
+                # 在0~time_step间进行随机采样，注意这里每一轮（epoch）训练时候是在0~timestep中随机选取一个程度的噪声，而不是每一轮都将所有的噪声都注入进去了
                 t = torch.randint(0, self.timesteps, (batch_size,), device=self.device).long()
                 # 这里model实例化的是DiffusionModel
                 # loss是写在model内的
