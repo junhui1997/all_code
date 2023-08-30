@@ -121,7 +121,7 @@ class Model(nn.Module):
         self.model1 = lstm_fcn_n(configs)
         self.model2 = lstm_fcn_n(configs)
         self.enc = configs.enc_in//2
-        self.fusion = fusion_layer(configs, 'former', 'full')
+        self.fusion = fusion_layer(configs, 'seq', 'full')
         # embed：timeF， freq:'h'按小时进行的embedding, 这里的d_model没有按照公式上面进行计算，同时需要注意这个d_model特别小，不是512
         self.enc_embedding_f = DataEmbedding(configs.enc_in//2, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
@@ -177,7 +177,8 @@ class Model(nn.Module):
         enc_out_f = self.model1(enc_out_f)
         enc_out_p = self.enc_embedding_p(enc_p, None)  # [B,T,C]
         enc_out_p = self.model2(enc_out_p)
-        enc_out = self.fusion(enc_out_f,enc_out_p)
+        # enc_out = self.fusion(enc_out_f,enc_out_p)
+        enc_out = enc_out_f
         # Output
         # the output transformer encoder/decoder embeddings don't include non-linearity
         output = self.act(enc_out)

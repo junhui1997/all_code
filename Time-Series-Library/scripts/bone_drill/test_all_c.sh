@@ -1,7 +1,7 @@
 cd ../..
-for model_name in Autoformer  Transformer Nonstationary_Transformer DLinear FEDformer Informer LightTS Reformer PatchTST Pyraformer MICN Crossformer lstm conv_net bp lstm_fcn fcn fcn_m conv_next TimesNet sinc_net
+for model_name in Autoformer  Transformer Nonstationary_Transformer DLinear FEDformer Informer LightTS Reformer PatchTST Pyraformer MICN Crossformer lstm conv_net bp lstm_fcn fcn  conv_next TimesNet consinc_net
 do
-for seq_len in 250 500
+for seq_len in 1000
 do
   for e_layers in 2
 do

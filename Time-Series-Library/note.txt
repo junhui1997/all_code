@@ -1,4 +1,11 @@
+68  useless
+69  all mean res
+616 all res with 250 500 1000, not see this one
+619 some test result
 621 without residual add in lstm_fcn block
 625 add residual blovk in lstm_fcn block,result is worse
-823 some low pass and several mean filter, low filter is wrong,but mean is correct
-828 all low pass corrent version
+719 all the result of mean filter for my model,best res is 0.72221,seq500     0.7044 seq250
+725 all low pass was wrong only the convnet was correct
+823 some low pass and several mean filter
+828 all low pass corrent version seq 250 500
+830 all low pass with seq 1000
