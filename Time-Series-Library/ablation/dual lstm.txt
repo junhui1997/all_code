@@ -87,8 +87,8 @@ class lstm_fcn_n(nn.Module):
         super(lstm_fcn_n, self).__init__()
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
-        self.fcn = fcn_mn(configs)
-        self.lstm = fcn_mn(configs)
+        self.fcn = lstm_n(configs)
+        self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', '')
         self.norm = nn.LayerNorm(configs.d_model)
 
@@ -203,3 +203,4 @@ class Model(nn.Module):
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
         return None
+

@@ -88,20 +88,17 @@ class lstm_fcn_n(nn.Module):
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
         self.fcn = fcn_mn(configs)
-        self.lstm = fcn_mn(configs)
+        self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', '')
         self.norm = nn.LayerNorm(configs.d_model)
 
     def forward(self, x):
         # 两个lstm效果并不好，使用lion后好一些
-        seasonal_init, trend_init = self.decomp(x)
-        x_fcn = self.fcn(seasonal_init)
-        x_lstm = self.lstm(trend_init)
+        x_fcn = self.fcn(x)
         # x_lstm = self.norm(x_lstm)
         # x_fcn = self.fcn(x)
         # x_lstm = self.lstm(x)
-        out = self.fusion(x_fcn, x_lstm)
-        return out
+        return x_fcn
 
 class Model(nn.Module):
     """
@@ -203,3 +200,4 @@ class Model(nn.Module):
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
         return None
+

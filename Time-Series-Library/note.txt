@@ -1,6 +1,6 @@
 68  useless
 69  all mean res
-616 all res with 250 500 1000, not see this one
+616 useless
 619 some test result
 621 without residual add in lstm_fcn block
 625 add residual blovk in lstm_fcn block,result is worse
@@ -9,3 +9,5 @@
 823 some low pass and several mean filter
 828 all low pass corrent version seq 250 500
 830 all low pass with seq 1000
+94 my low pass result with stable version each one test for 100 its
+97 compensate res and my low pass result with stable version each one test for 100 its, which include 94 version
