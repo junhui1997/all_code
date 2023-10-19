@@ -1,9 +1,4 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.fft
-from layers.Embed import DataEmbedding
-from layers.block import lstm_n
+
 
 import torch
 import torch.nn as nn
@@ -88,7 +83,7 @@ class lstm_fcn_n(nn.Module):
         kernel_size = configs.moving_avg
         self.decomp = series_decomp(kernel_size)
         self.fcn = fcn_mn(configs)
-        self.lstm = fcn_mn(configs)
+        self.lstm = lstm_n(configs)
         self.fusion = fusion_layer(configs, 'weight_sum', '')
         self.norm = nn.LayerNorm(configs.d_model)
 

@@ -138,22 +138,23 @@ class lstm_n(nn.Module):
         self.input_dim = configs.d_model
         self.hidden_dim = configs.d_model
         self.layer_dim = configs.e_layers
+        self.batch_size = configs.batch_size
 
         # 注意这里设置了batch_first所以第一个维度是batch，lstm第二个input是输出的维度，第三个是lstm的层数
         self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.layer_dim, batch_first=True)
+        #self.hidden = self.init_hidden()
 
     def forward(self, x):
-        # init_hidden并不是魔法函数，是每次循环时候手动执行更新的
-        h0, c0 = self.init_hidden(x)
-        out, (hn, cn) = self.lstm(x, (h0, c0))
+        out, _ = self.lstm(x)
         # (N, L, D * H_{out})(N,L,D∗H_out) D代表的是direction，如果是双向lstm的话则d为2 else 1，L代表的是sequence
         return out
 
-    def init_hidden(self, x):
+    def init_hidden(self):
         # (lstm层的个数，batch_size,输出层的个数)
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        return [t.cuda() for t in (h0, c0)]
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        h0 = torch.zeros(self.layer_dim, self.batch_size, self.hidden_dim).to(device)
+        c0 = torch.zeros(self.layer_dim, self.batch_size, self.hidden_dim).to(device)
+        return (h0, c0)
 
 
 class WeightedSum(nn.Module):
