@@ -2,6 +2,7 @@ from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Data
     MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
 from data_provider.uea import collate_fn
 from data_provider.data_loader_bone_drill import Dataset_bone_drill, Dataset_bone_drill_c
+from data_provider.data_loader_pd import Dataset_neural_pd
 from torch.utils.data import DataLoader
 
 data_dict = {
@@ -18,7 +19,8 @@ data_dict = {
     'SWAT': SWATSegLoader,
     'UEA': UEAloader,
     'bone_drill': Dataset_bone_drill,
-    'bone_drill_c': Dataset_bone_drill_c
+    'bone_drill_c': Dataset_bone_drill_c,
+    'neural_pd': Dataset_neural_pd
 }
 
 
@@ -33,6 +35,9 @@ def data_provider(args, flag):
             batch_size = args.batch_size
         else:
             batch_size = 1  # bsz=1 for evaluation
+            # change_l, 提高推理速度
+            if args.data == 'bone_drill' or args.data == 'neural_pd':
+                batch_size = args.batch_size
         freq = args.freq
     else:
         shuffle_flag = True
@@ -82,7 +87,7 @@ def data_provider(args, flag):
         if args.data == 'm4':
             drop_last = False
 
-        if args.data == 'bone_drill':
+        if args.data == 'bone_drill' or args.data == 'neural_pd':
             data_set = Data(
                 root_path=args.root_path,
                 data_path=args.data_path,

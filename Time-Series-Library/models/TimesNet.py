@@ -147,6 +147,12 @@ class Model(nn.Module):
         stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
         x_enc /= stdev
 
+
+        #  specially for neural pd
+        if self.configs.data == 'neural_pd' and self.configs.enc_in > 4 :
+            means = means[:, :, 4:6]  #第5到6列是e
+            stdev = stdev[:, :, 4:6]
+
         # embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
         # seq_len -> seq_len+prediction

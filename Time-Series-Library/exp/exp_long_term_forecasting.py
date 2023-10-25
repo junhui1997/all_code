@@ -9,6 +9,8 @@ import os
 import time
 import warnings
 import numpy as np
+from neural_pd.py_simu_eval import eval_simu
+
 
 warnings.filterwarnings('ignore')
 
@@ -159,6 +161,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
+            # print('finish vali loss computing')
             test_loss = self.vali(test_data, test_loader, criterion)
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
@@ -189,7 +192,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         self.model.eval()
         with torch.no_grad():
-            # test时候batch_size为1
+            # test时候batch_size为1， shuffle false
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
@@ -228,14 +231,15 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 pred = outputs
                 true = batch_y
 
-                scale = True
+                scale = False
                 if scale:
                     # 使用了dataset中的fit的数值
-                    # pred,true 这里有个多于的维度1，也就是初始时候的batch_size
+                    # pred,true 这里有个多余的维度1，也就是初始时候的batch_size
                     pred[0] = test_data.inverse_transform(pred[0])
                     true[0] = test_data.inverse_transform(true[0])
                 preds.append(pred)
                 trues.append(true)
+                # 现在这里变成了batch_size*20次才输出一组图片，这个可以适当修改
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
                     if scale:
@@ -248,7 +252,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         preds = np.array(preds)
         trues = np.array(trues)
         print('test shape:', preds.shape, trues.shape)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])  # test_size, pred_len,c_out
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
@@ -267,13 +271,16 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         f.close()
 
         # visualize the res of pred and trues
-        seq_len = self.args.seq_len
-        res_pred = extract_seq(preds, seq_len)
-        res_true = extract_seq(trues, seq_len)
-        visual_all(res_true, res_pred, os.path.join(folder_path, 'res.jpg'))
+        # 这里是为了去重，比如每个test都预测了一部分，最后就会有重叠，画图时候为了不重叠所以就给截取出来
+        pred_len = self.args.pred_len
+        res_pred = extract_seq(preds, pred_len)
+        res_true = extract_seq(trues, pred_len)
+        visual_all(res_true, res_pred, os.path.join(folder_path, 'res.jpg'), self.args.c_out)
 
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
 
+        if self.args.data == 'neural_pd':
+            eval_simu(self.model, self.args, folder_path)
         return

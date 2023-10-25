@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-
+import math
 plt.switch_backend('agg')
 
 
@@ -9,7 +9,7 @@ def adjust_learning_rate(optimizer, epoch, args, scheduler=None, val_loss=0):
     # lr = args.learning_rate * (0.2 ** (epoch // 2))
     if args.lradj == 'type1':
         lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
-        lr_adjust = {epoch: args.learning_rate/epoch}
+        lr_adjust = {epoch: args.learning_rate / epoch}
     elif args.lradj == 'type2':
         lr_adjust = {
             2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
@@ -128,22 +128,41 @@ def cal_accuracy(y_pred, y_true):
     return np.mean(y_pred == y_true)
 
 
-def extract_seq(data, seq_len):
-    data = data[::seq_len, :, :]
-    #print(data.shape)
-    data = data.reshape(-1, data.shape[-1])
+def extract_seq(data, pred_len):
+    # 这一行的意思是间隔是seq_len,每次都获取当前最大的预测长度填进去，而不是每次只是简单的使用紧接着那个数值
+    # 注意区分这个和data[:pred_len, :, :]
+    # data = [test_num/pred_len,:,:]
+    data = data[::pred_len, :, :]
+    # print(data.shape)
+    data = data.reshape(-1, data.shape[-1])  # 保持维数不变展平预测的部分
     return data
 
 
-def visual_all(res_true, res_pred, name):
-    fig, axs = plt.subplots(2, 3, figsize=(12, 6))
+def visual_all(res_true, res_pred, name, c_out):
+    fig, axs = plt.subplots(2, math.ceil(c_out/2), figsize=(12, 6))
     idx = 0
-    for i in range(len(axs)):
-        for j in range(len(axs[0])):
+    # 这里有个bug就是，如果列为1，那么就会导致没有len(axs[0])
+    if math.ceil(c_out/2) > 1:
+        for i in range(len(axs)):
+            for j in range(len(axs[0])):
+                if idx >= c_out:
+                    # 处理奇数张图
+                    break
+                # 绘制第一个子图
+                axs[i][j].plot(res_true[:, idx], label='GroundTruth')
+                axs[i][j].plot(res_pred[:, idx], label='Prediction')
+                axs[i][j].legend()
+                axs[i][j].set_title('Subplot {}'.format(idx))
+                idx += 1
+    else:
+        for i in range(len(axs)):
+            if idx >= c_out:
+                # 处理奇数张图
+                 break
             # 绘制第一个子图
-            axs[i][j].plot(res_true[:, idx], label='GroundTruth')
-            axs[i][j].plot(res_pred[:, idx], label='Prediction')
-            axs[i][j].legend()
-            axs[i][j].set_title('Subplot {}'.format(idx))
+            axs[i].plot(res_true[:, idx], label='GroundTruth')
+            axs[i].plot(res_pred[:, idx], label='Prediction')
+            axs[i].legend()
+            axs[i].set_title('Subplot {}'.format(idx))
             idx += 1
     plt.savefig(name)
