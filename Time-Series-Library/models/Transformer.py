@@ -18,6 +18,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
+        self.seq_len = configs.seq_len
         self.output_attention = configs.output_attention
         # Embedding
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
@@ -125,7 +126,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
-        if self.task_name[:6] == 'encoder':
+        if self.task_name[:7] == 'encoder':
             dec_out = self.encoding(x_enc, x_mark_enc)
             return dec_out  # [B, L, D]
         return None

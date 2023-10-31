@@ -107,7 +107,11 @@ class SeasonalPrediction(nn.Module):
 class Model(nn.Module):
     def __init__(self, configs, conv_kernel=[12, 16]):
         super(Model, self).__init__()
-
+        if configs.task_name[:7] == 'encoder':
+            configs.c_out = configs.enc_in
+        self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
+                                           configs.dropout)
+        # added by me
         decomp_kernel = []  # kernel of decomposition operation
         isometric_kernel = []  # kernel of isometric convolution
         for ii in conv_kernel:
@@ -211,6 +215,7 @@ class Model(nn.Module):
         dec_out = dec_out + trend
         output = dec_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
         output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = self.enc_embedding(output, None)
         return output
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
@@ -226,7 +231,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
-        if self.task_name[:6] == 'encoder':
+        if self.task_name[:7] == 'encoder':
             dec_out = self.encoding(x_enc, x_mark_enc)
             return dec_out  # [B, L, D]
         return None

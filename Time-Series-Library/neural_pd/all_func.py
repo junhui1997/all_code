@@ -236,3 +236,8 @@ def arrays_to_dataframe(total_q, total_dq, total_eq, total_edq):
         'edq1': edq1,
         'edq2': edq2
     })
+
+def apply_norm(data):
+    mean = data.mean(0)
+    std = data.std(0)
+    return (data - mean) / std

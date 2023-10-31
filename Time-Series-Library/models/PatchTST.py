@@ -3,6 +3,7 @@ from torch import nn
 from layers.Transformer_EncDec import Encoder, EncoderLayer
 from layers.SelfAttention_Family import FullAttention, AttentionLayer
 from layers.Embed import PatchEmbedding
+from layers.Embed import DataEmbedding #
 
 
 class FlattenHead(nn.Module):
@@ -35,7 +36,8 @@ class Model(nn.Module):
         self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
         padding = stride
-
+        self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
+                                           configs.dropout)
         # patching and embedding
         self.patch_embedding = PatchEmbedding(
             configs.d_model, patch_len, stride, padding, configs.dropout)
@@ -62,7 +64,7 @@ class Model(nn.Module):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             self.head = FlattenHead(configs.enc_in, self.head_nf, configs.pred_len,
                                     head_dropout=configs.dropout)
-        elif self.task_name == 'imputation' or self.task_name == 'anomaly_detection':
+        elif self.task_name == 'imputation' or self.task_name == 'anomaly_detection' or self.task_name[:7] == 'encoder':
             self.head = FlattenHead(configs.enc_in, self.head_nf, configs.seq_len,
                                     head_dropout=configs.dropout)
         elif self.task_name == 'classification':
@@ -227,7 +229,7 @@ class Model(nn.Module):
         # Decoder 使用了forecast里面的一部分
         dec_out = self.head(enc_out)  # z: [bs x nvars x target_window]
         dec_out = dec_out.permute(0, 2, 1)
-
+        dec_out = self.enc_embedding(dec_out, None)
         return dec_out
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
@@ -243,7 +245,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
-        if self.task_name[:6] == 'encoder':
+        if self.task_name[:7] == 'encoder':
             dec_out = self.encoding(x_enc, x_mark_enc)
             return dec_out  # [B, L, D]
         return None

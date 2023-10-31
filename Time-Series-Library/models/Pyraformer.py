@@ -18,6 +18,7 @@ class Model(nn.Module):
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
         self.d_model = configs.d_model
+        self.seq_len = configs.seq_len
 
         if self.task_name == 'short_term_forecast':
             window_size = [2,2]
@@ -34,6 +35,10 @@ class Model(nn.Module):
             self.dropout = nn.Dropout(configs.dropout)
             self.projection = nn.Linear(
                 (len(window_size)+1)*self.d_model * configs.seq_len, configs.num_class)
+        elif self.task_name[:7] == 'encoder':
+            self.act = torch.nn.functional.gelu
+            self.dropout = nn.Dropout(configs.dropout)
+            self.projection = nn.Linear((len(window_size)+1)*self.d_model, self.d_model)
 
     def long_forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         enc_out = self.encoder(x_enc, x_mark_enc)[:, -1, :]
@@ -85,7 +90,8 @@ class Model(nn.Module):
         # enc
         enc_out = self.encoder(x_enc, x_mark_enc=None)
         output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], self.configs.seq_len, -1)
+        output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = self.projection(output)
         return output
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
@@ -105,7 +111,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
-        if self.task_name[:6] == 'encoder':
+        if self.task_name[:7] == 'encoder':
             dec_out = self.encoding(x_enc, x_mark_enc)
             return dec_out  # [B, L, D]
         return None

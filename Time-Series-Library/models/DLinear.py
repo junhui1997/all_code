@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from layers.Autoformer_EncDec import series_decomp
+from layers.Embed import DataEmbedding
 
 
 class Model(nn.Module):
@@ -16,7 +17,9 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len
-        if self.task_name == 'classification' or self.task_name == 'anomaly_detection' or self.task_name == 'imputation':
+        self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
+                                           configs.dropout)
+        if self.task_name == 'classification' or self.task_name == 'anomaly_detection' or self.task_name == 'imputation' or self.task_name[:7] == 'encoder':
             self.pred_len = configs.seq_len
         else:
             self.pred_len = configs.pred_len
@@ -93,7 +96,10 @@ class Model(nn.Module):
 
     def encoding(self, x_enc, x_mark_enc):
         enc_out = self.encoder(x_enc)
-        return enc_out
+        # 原本的light没有嵌入这一项，为了维持模型统一，统一先从enc_in->d_model
+        enc_out = self.enc_embedding(enc_out, None)
+        output = enc_out.reshape(enc_out.shape[0], self.seq_len, -1)
+        return output
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             dec_out = self.forecast(x_enc)
@@ -107,7 +113,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc)
             return dec_out  # [B, N]
-        if self.task_name[:6] == 'encoder':
+        if self.task_name[:7] == 'encoder':
             dec_out = self.encoding(x_enc, x_mark_enc)
             return dec_out  # [B, L, D]
         return None
