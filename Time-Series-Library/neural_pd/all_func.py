@@ -4,6 +4,7 @@ from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 import scipy
 
+
 def stiffness(q):
     q1, q2 = q[0, 0], q[1, 0]
 
@@ -69,15 +70,17 @@ def gravity(q):
 
     return G
 
+
 def dynamics(TL, M):
     M = M.reshape(-1)
-    #print(M.shape)
+    # print(M.shape)
     M22 = np.array([[M[0], M[1]],
                     [M[2], M[3]]])
-    #print(M22.shape)
+    # print(M22.shape)
     ddq = np.linalg.solve(M22, TL)
 
     return ddq
+
 
 def disturbance(t):
     if t > 10:
@@ -86,8 +89,21 @@ def disturbance(t):
         d = np.zeros(2)
     return d.reshape(2, 1)
 
-def plot_all(q, dq, sTau, tout, folder_path):
 
+def plot_compare(data_a, data_b, label_a, label_b, folder_path, name):
+    fig, axs = plt.subplots(data_a.shape[-1])
+    idx = 0
+    for i in range(len(axs)):
+        # 绘制第一个子图
+        axs[i].plot(data_a[:, idx], label=label_a, linewidth=0.5)
+        axs[i].plot(data_b[:, idx], label=label_b, linewidth=0.5)
+        axs[i].legend(loc='upper right', fontsize='small')
+        axs[i].set_title('Subplot {}'.format(idx))
+        idx += 1
+    plt.savefig(folder_path + 'compare{}.svg'.format(name), format='svg')
+
+
+def plot_all(q, dq, sTau, tout, folder_path):
     # load baseline data
     mat_g = scipy.io.loadmat('neural_pd/gravity.mat')
     mat_og = scipy.io.loadmat('neural_pd/gravity_offset.mat')
@@ -111,9 +127,9 @@ def plot_all(q, dq, sTau, tout, folder_path):
     plt.ylabel(r'$q_1$ (rad)')
 
     plt.subplot(323)
-    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q[:, 0]) * 180 / np.pi,  linewidth=0.5, label='our')
-    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q_g[:, 0]) * 180 / np.pi,  linewidth=0.5, label='g')
-    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q_og[:, 0]) * 180 / np.pi,  linewidth=0.5, label='og')
+    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q[:, 0]) * 180 / np.pi, linewidth=0.5, label='our')
+    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q_g[:, 0]) * 180 / np.pi, linewidth=0.5, label='g')
+    plt.plot(tout, abs(np.sin(np.pi / 4 * tout) - np.pi / 2 - q_og[:, 0]) * 180 / np.pi, linewidth=0.5, label='og')
     plt.legend(loc='upper right', fontsize='small')
     plt.ylabel(r'$e_{q_1}$ (deg)')
 
@@ -133,21 +149,19 @@ def plot_all(q, dq, sTau, tout, folder_path):
     plt.ylabel(r'$e_{q_2}$ (deg)')
 
     plt.subplot(325)
-    plt.plot(tout, sTau[:, 0],  linewidth=0.5, label='our')
+    plt.plot(tout, sTau[:, 0], linewidth=0.5, label='our')
     plt.plot(tout, sTau_g[:, 0], linewidth=0.5, label='g')
-    plt.plot(tout, sTau_og[:, 0],  linewidth=0.5, label='og')
+    plt.plot(tout, sTau_og[:, 0], linewidth=0.5, label='og')
     plt.legend(loc='upper right', fontsize='small')
     plt.ylabel(r'$\tau_1$ [Nm]')
 
     plt.subplot(326)
     plt.plot(tout, sTau[:, 1], linewidth=0.5, label='our')
-    plt.plot(tout, sTau_g[:, 1],  linewidth=0.5, label='g')
-    plt.plot(tout, sTau_og[:, 1],  linewidth=0.5, label='og')
+    plt.plot(tout, sTau_g[:, 1], linewidth=0.5, label='g')
+    plt.plot(tout, sTau_og[:, 1], linewidth=0.5, label='og')
     plt.ylabel(r'$\tau_2$ [Nm]')
     plt.legend(loc='upper right', fontsize='small')
     plt.savefig(folder_path + 'pos_{}.svg'.format(counter), format='svg')
-
-
 
     # plot the second graph
     plt.figure(2)

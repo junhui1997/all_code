@@ -17,6 +17,7 @@ class Model(nn.Module):
         self.task_name = configs.task_name
         self.pred_len = configs.pred_len
         self.label_len = configs.label_len
+        self.seq_len = configs.seq_len
 
         # Embedding
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
@@ -128,6 +129,14 @@ class Model(nn.Module):
         output = self.projection(output)  # (batch_size, num_classes)
         return output
 
+    def encoding(self, x_enc, x_mark_enc):
+        # enc
+        enc_out = self.enc_embedding(x_enc, None)
+        enc_out, attns = self.encoder(enc_out, attn_mask=None)
+        output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
+        output = output.reshape(output.shape[0], self.seq_len, -1)
+        return output
+
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast':
             dec_out = self.long_forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
@@ -144,4 +153,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        if self.task_name[:6] == 'encoder':
+            dec_out = self.encoding(x_enc, x_mark_enc)
+            return dec_out  # [B, L, D]
         return None

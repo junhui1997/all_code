@@ -48,10 +48,10 @@ class TimesBlock(nn.Module):
         # d_ff是卷积层的中间变量，因为使用了一个d_model->d_ff->d_model的变化
         # num_kernels默认是6
         self.conv = nn.Sequential(
-            Inception_Block_V3(configs.d_model, configs.d_ff,
+            Inception_Block_V1(configs.d_model, configs.d_ff,
                                num_kernels=configs.num_kernels),
             nn.GELU(),
-            Inception_Block_V3(configs.d_ff, configs.d_model,
+            Inception_Block_V1(configs.d_ff, configs.d_model,
                                num_kernels=configs.num_kernels)
         )
 
@@ -137,6 +137,7 @@ class Model(nn.Module):
             self.projection = nn.Linear(
                 configs.d_model * configs.seq_len, configs.num_class)
 
+
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
         # Normalization from Non-stationary Transformer
         # x_enc:[batch_size,seq_len,dim]
@@ -150,8 +151,8 @@ class Model(nn.Module):
 
         #  specially for neural pd
         if self.configs.data == 'neural_pd' and self.configs.enc_in > 4 :
-            means = means[:, :, 4:6]  #第5到6列是e
-            stdev = stdev[:, :, 4:6]
+            means = means[:, :, 4:4+self.configs.c_out]  #第5到6列是e
+            stdev = stdev[:, :, 4:4+self.configs.c_out]
 
         # embedding
         enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
@@ -162,16 +163,20 @@ class Model(nn.Module):
         for i in range(self.layer):
             enc_out = self.layer_norm(self.model[i](enc_out))
         # porject back
+
         dec_out = self.projection(enc_out)
 
-        # De-Normalization from Non-stationary Transformer
-        dec_out = dec_out * \
-                  (stdev[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        dec_out = dec_out + \
-                  (means[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        return dec_out
+        if self.configs.data == 'neural_pd' and self.configs.enc_in <= 4:
+            return dec_out
+        else:
+            # De-Normalization from Non-stationary Transformer
+            dec_out = dec_out * \
+                      (stdev[:, 0, :].unsqueeze(1).repeat(
+                          1, self.pred_len + self.seq_len, 1))
+            dec_out = dec_out + \
+                      (means[:, 0, :].unsqueeze(1).repeat(
+                          1, self.pred_len + self.seq_len, 1))
+            return dec_out
 
     def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):
         # Normalization from Non-stationary Transformer
@@ -244,6 +249,16 @@ class Model(nn.Module):
         output = self.projection(output)  # (batch_size, num_classes)
         return output
 
+    def encoding(self, x_enc, x_mark_enc):
+        # embedding
+        enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]
+        # TimesNet
+        for i in range(self.layer):
+            enc_out = self.layer_norm(self.model[i](enc_out))
+        output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
+        output = output.reshape(output.shape[0], self.seq_len, -1)
+        return output
+
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             dec_out = self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
@@ -259,4 +274,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        if self.task_name[:6] == 'encoder':
+            dec_out = self.encoding(x_enc, x_mark_enc)
+            return dec_out  # [B, L, D]
         return None

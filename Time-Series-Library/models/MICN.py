@@ -202,6 +202,16 @@ class Model(nn.Module):
         output = self.projection(output)  # (batch_size, num_classes)
         return output
 
+    def encoding(self, x_enc, x_mark_enc):
+        # Multi-scale Hybrid Decomposition
+        seasonal_init_enc, trend = self.decomp_multi(x_enc)
+        # embedding
+        dec_out = self.dec_embedding(seasonal_init_enc, None)
+        dec_out = self.conv_trans(dec_out)
+        dec_out = dec_out + trend
+        output = dec_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
+        output = output.reshape(output.shape[0], self.seq_len, -1)
+        return output
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             dec_out = self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
@@ -216,4 +226,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        if self.task_name[:6] == 'encoder':
+            dec_out = self.encoding(x_enc, x_mark_enc)
+            return dec_out  # [B, L, D]
         return None

@@ -37,12 +37,13 @@ class Dataset_neural_pd(Dataset):
     def __read_data__(self):
         self.scaler = StandardScaler()
         drill_folder = '../dataset/neural_pd/'
-        df_raw = pd.read_pickle(drill_folder+'pd_train.pkl')
+        #df_raw = pd.read_pickle(drill_folder+'pd_train.pkl')
+        df_raw = pd.read_pickle(drill_folder + 'pd_ref_train.pkl')
 
         '''
         df_raw.columns: ['date', ...(other features), target feature]
         '''
-        #df_raw = df_raw[::2]
+        # df_raw = df_raw[:-8000]
         if self.scale:
             df_raw.iloc[:, :] = self.scaler.fit_transform(df_raw.values)
         val_list = []
@@ -92,7 +93,7 @@ class Dataset_neural_pd(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
-        return len(self.data_x) - self.seq_len - self.pred_len + 1
+        return len(self.data_x)
 
     def inverse_transform(self, data):
         # 这里有个问题就是原本的数据是维度是enc_in,现在不是了，所以先给扩张一下，再给变换回去

@@ -202,6 +202,33 @@ class Model(nn.Module):
         output = self.projection(output)  # (batch_size, num_classes)
         return output
 
+    def encoding(self, x_enc, x_mark_enc):
+        # Normalization from Non-stationary Transformer
+        means = x_enc.mean(1, keepdim=True).detach()
+        x_enc = x_enc - means
+        stdev = torch.sqrt(
+            torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
+        x_enc /= stdev
+
+        # do patching and embedding
+        x_enc = x_enc.permute(0, 2, 1)
+        # u: [bs * nvars x patch_num x d_model]
+        enc_out, n_vars = self.patch_embedding(x_enc)
+
+        # Encoder
+        # z: [bs * nvars x patch_num x d_model]
+        enc_out, attns = self.encoder(enc_out)
+        # z: [bs x nvars x patch_num x d_model]
+        enc_out = torch.reshape(
+            enc_out, (-1, n_vars, enc_out.shape[-2], enc_out.shape[-1]))
+        # z: [bs x nvars x d_model x patch_num]
+        enc_out = enc_out.permute(0, 1, 3, 2)
+        # 这里维数有问题
+        # Decoder 使用了forecast里面的一部分
+        dec_out = self.head(enc_out)  # z: [bs x nvars x target_window]
+        dec_out = dec_out.permute(0, 2, 1)
+
+        return dec_out
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             dec_out = self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
@@ -216,4 +243,7 @@ class Model(nn.Module):
         if self.task_name == 'classification':
             dec_out = self.classification(x_enc, x_mark_enc)
             return dec_out  # [B, N]
+        if self.task_name[:6] == 'encoder':
+            dec_out = self.encoding(x_enc, x_mark_enc)
+            return dec_out  # [B, L, D]
         return None
