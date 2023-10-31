@@ -41,14 +41,12 @@ class Exp_sep(Exp_Basic):
 
 
     def train(self, setting):
-        test_in = torch.rand((self.args.batch_size, self.args.seq_len, self.args.enc_in)).to(self.device)
-        test_out = self.model(test_in)
-        a = 1
+        # test_in = torch.rand((self.args.batch_size, self.args.seq_len, self.args.enc_in)).to(self.device)
+        # test_out = self.model(test_in)
+        # a = 1
 
 
-
-
-        folder_path = './test_results/neural_pd/' + setting + '/'
+        folder_path = './results/neural_pd/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         buffer_size = 2000  # 不能设置太大2000

@@ -96,6 +96,9 @@ parser.add_argument('--p_hidden_dims', type=int, nargs='+', default=[128, 128],
 parser.add_argument('--p_hidden_layers', type=int, default=1, help='number of hidden layers in projector')
 parser.add_argument('--filter', type=str, default='no_filter', help='choose which filter for bone drill')
 
+# neural pd parameters
+parser.add_argument('--input_type', type=str, default='actual', help='ref or actual')
+
 args = parser.parse_args()
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
@@ -158,7 +161,7 @@ if args.is_training:
         exp.train(setting)
 
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting)
+        # exp.test(setting)
         torch.cuda.empty_cache()
 else:
     # ii = 0
