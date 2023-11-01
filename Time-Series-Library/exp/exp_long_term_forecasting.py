@@ -281,7 +281,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
 
-        if self.args.data == 'neural_pd' and True:
+        if self.args.data == 'neural_pd' and False:
             # res_pred = np.concatenate((np.zeros((self.args.seq_len+self.args.pred_len+1, 2)), res_pred), axis=0)
             # eval_simu(self.model, self.args, folder_path, res_pred)
             eval_simu(self.model, self.args, folder_path)
