@@ -29,6 +29,9 @@ def adjust_learning_rate(optimizer, epoch, args, scheduler=None, val_loss=0):
         if lr != lr_prev:
             print('Updating learning rate to {}'.format(lr))
         return
+    if args.lradj == 'type5':
+        print('type5 does not update learning rate')
+        lr_adjust = {epoch: args.learning_rate}
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
         for param_group in optimizer.param_groups:
