@@ -36,9 +36,9 @@ class Dataset_neural_pd(Dataset):
 
     def __read_data__(self):
         self.scaler = StandardScaler()
-        drill_folder = '../dataset/neural_pd/'
+        folder = '../dataset/neural_pd/'
         #df_raw = pd.read_pickle(drill_folder+'pd_train.pkl')
-        df_raw = pd.read_pickle(drill_folder + 'pd_ref_train.pkl')
+        df_raw = pd.read_pickle(folder + 'pd_ref_train.pkl')
 
         '''
         df_raw.columns: ['date', ...(other features), target feature]
