@@ -214,7 +214,7 @@ class Model(nn.Module):
         dec_out = self.conv_trans(dec_out)
         dec_out = dec_out + trend
         output = dec_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = output.reshape(output.shape[0], x_enc.shape[1], -1)
         output = self.enc_embedding(output, None)
         return output
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):

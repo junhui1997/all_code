@@ -45,7 +45,7 @@ def get_all_trail():
 
 def get_cross_val_splits(args):
     from config import split_info_dir
-    split_info_dir = "{}{}/".format(split_info_dir, args.task_name)
+    split_info_dir = "{}{}/".format(split_info_dir, args.sur_task_name)
     split_dirs = os.listdir(split_info_dir)
     split_dirs = sorted([s for s in split_dirs if "Split" in s])
 

@@ -18,6 +18,8 @@ from models.embed import DataEmbedding
 from models.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
 from models.Autoformer_EncDec import my_Layernorm, series_decomp
 import time
+from models import Autoformer, Transformer, TimesNet, Nonstationary_Transformer, DLinear, \
+    Informer, LightTS, Reformer, Pyraformer, PatchTST, MICN, Crossformer
 
 
 # This module should be tested carefully
@@ -77,6 +79,33 @@ class ChannelNorm(nn.Module):
         divider = divider.unsqueeze(0).unsqueeze(2)
         divider = divider.repeat(x.size(0), 1, x.size(2))
         x = x / divider
+        return x
+
+
+class generate_encoder(nn.Module):
+    def __init__(self, configs):
+        super(generate_encoder, self).__init__()
+        self.model_dict = {
+            'TimesNet': TimesNet,
+            'Autoformer': Autoformer,
+            'Transformer': Transformer,
+            'Nonstationary_Transformer': Nonstationary_Transformer,
+            'DLinear': DLinear,
+            'Informer': Informer,
+            'LightTS': LightTS,
+            'Reformer': Reformer,
+            'PatchTST': PatchTST,
+            'Pyraformer': Pyraformer,
+            'MICN': MICN,
+            'Crossformer': Crossformer,
+
+        }
+        self.args = configs
+        self.model = self.model_dict[self.args.model].Model(self.args).float()
+
+    def forward(self, x):  # ()
+        x_mark = torch.ones((x.shape[0], x.shape[1])).to(x.device)
+        x = self.model(x, x_mark, None, None)
         return x
 
 
@@ -307,83 +336,10 @@ class TcnGcnNet(nn.Module):
         self.fc = nn.Linear(self.hidden_state * 3, class_num)
         nn.init.xavier_uniform_(self.fc.weight)
 
-        d_model = 512
-        attn = 'prob'
-        factor = 5
-        n_heads = 8
-        dropout = 0.1
-        d_ff = 512
-        activation = 'gelu'
-        e_layers = 1
-        distil = None
-        embed = 'fixed'
-        # 192 是最后一个维度，也就是dim
-        self.enc_embedding = DataEmbedding(64, d_model, embed, dropout)
-        Attn = ProbAttention if attn == 'prob' else FullAttention
-        Attn = AutoCorrelation
-        self.encoder_all = att_Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
-                                   d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-
-            norm_layer=my_Layernorm(d_model)
-        )
-
-        ##2 part
-        self.decomp = series_decomp(3)
-        self.enc_embedding_2 = DataEmbedding(64, d_model, embed, dropout)
-        Attn = ProbAttention if attn == 'prob' else FullAttention
-        Attn = AutoCorrelation
-        self.encoder_all_2 = att_Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
-                                   d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-
-            norm_layer=my_Layernorm(d_model)
-        )
-
-
-
-
-        attn = 'full'
-        e_layers = 5
-        self.kine_enc_embedding = DataEmbedding(14, d_model, embed, dropout)
-        Attn = ProbAttention if attn == 'prob' else FullAttention
-        self.kine_encoder = att_Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=False),
-                                   d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation
-                ) for l in range(e_layers)
-            ],
-            [
-                ConvLayer(
-                    d_model
-                ) for l in range(e_layers - 1)
-            ] if distil else None,
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
+        self.encoder_all = generate_encoder(args)
         # 512是d_model,128是左右两边的128,5是num_classes
-        self.kine_fc = torch.nn.Linear(512, 128)
-        self.new_fc = torch.nn.Linear(512, args.num_classes)
+        self.kine_fc = torch.nn.Linear(args.d_model, 128)
+        self.new_fc = torch.nn.Linear(args.d_model, args.num_classes)
 
         # forward only change kinetic embedding
 
@@ -423,7 +379,7 @@ class TcnGcnNet(nn.Module):
     #     else:
     #         return out
 
-        # forward only change final graph network
+    # forward only change final graph network
     # def forward(self, x_vision, x_kinematics, return_emb=False):
     #      x_left = x_kinematics[:, :, :7]
     #      x_right = x_kinematics[:, :, 7:]
@@ -450,32 +406,26 @@ class TcnGcnNet(nn.Module):
     #          return out
 
     def forward(self, x_vision, x_kinematics, return_emb=False):
-         x_left = x_kinematics[:, :, :7]
-         x_right = x_kinematics[:, :, 7:]
+        x_left = x_kinematics[:, :, :7]
+        x_right = x_kinematics[:, :, 7:]
 
-         x_vision = self.tcn_vision(x_vision)
-         x_left_t = self.tcn_left(x_left)
-         x_right_t = self.tcn_right(x_right)
+        x_vision = self.tcn_vision(x_vision)
+        x_left_t = self.tcn_left(x_left)
+        x_right_t = self.tcn_right(x_right)
 
-         x_left_l, _ = self.lstm_left(x_left)
-         x_right_l, _ = self.lstm_right(x_right)
+        x_left_l, _ = self.lstm_left(x_left)
+        x_right_l, _ = self.lstm_right(x_right)
 
-         x_left = (x_left_t + x_left_l) / 2
-         x_right = (x_right_t + x_right_l) / 2
-         # 最终需要使用的结果是x_left,x_right,x_vision:[batch_size,video_len,64]
+        x_left = (x_left_t + x_left_l) / 2
+        x_right = (x_right_t + x_right_l) / 2
+        # 最终需要使用的结果是x_left,x_right,x_vision:每一个都是[batch_size,video_len,64]
 
-         x_fu = x_left + x_right + x_vision
-         seasonal_init, trend_init = self.decomp(x_fu)
+        x_fu = x_left + x_right + x_vision
 
+        out = self.encoder_all(x_fu)
+        out = self.new_fc(out)
 
-
-         seasonal_init = self.enc_embedding(seasonal_init)
-         seasonal_init, attns = self.encoder_all(seasonal_init, attn_mask=None)
-         trend_init = self.enc_embedding(trend_init)
-         trend_init, attns = self.encoder_all(trend_init, attn_mask=None)
-         out = self.new_fc(trend_init+seasonal_init)
-
-         if return_emb:
-             return out, 0
-         else:
-             return out
+        if return_emb:
+            return out, 0
+        else:
+            return out

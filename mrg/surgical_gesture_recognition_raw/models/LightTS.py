@@ -153,7 +153,7 @@ class Model(nn.Module):
         enc_out = self.encoder(x_enc)
         # 原本的light没有嵌入这一项，为了维持模型统一，统一先从enc_in->d_model
         enc_out = self.enc_embedding(enc_out, None)
-        output = enc_out.reshape(enc_out.shape[0], self.seq_len, -1)
+        output = enc_out.reshape(enc_out.shape[0], x_enc.shape[1], -1)
         return output
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':

@@ -118,7 +118,7 @@ class Model(nn.Module):
         enc_out = self.enc_embedding(x_enc, None)
         enc_out, attns = self.encoder(enc_out)
         output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = output.reshape(output.shape[0], x_enc.shape[1], -1)
         return output
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):

@@ -90,7 +90,7 @@ class Model(nn.Module):
         # enc
         enc_out = self.encoder(x_enc, x_mark_enc=None)
         output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = output.reshape(output.shape[0], x_enc.shape[1], -1)
         output = self.projection(output)
         return output
 

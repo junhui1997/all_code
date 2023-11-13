@@ -149,11 +149,12 @@ def train_model(model,
 
             # TODO!!!
             if v_accuracy > v_accuracy_best:
-                best_model = copy.deepcopy(model)
+                #best_model = copy.deepcopy(model)
                 v_accuracy_best = v_accuracy
+                torch.save(model.state_dict(), trained_model_file)
 
-        if trained_model_file is not None:
-            torch.save(best_model.state_dict(), trained_model_file)
+        # if trained_model_file is not None:
+        #     torch.save(best_model.state_dict(), trained_model_file)
 
 
 def test_model(model, test_dataset, loss_weights=None, plot_naming=None):

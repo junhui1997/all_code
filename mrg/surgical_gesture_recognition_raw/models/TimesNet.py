@@ -41,21 +41,21 @@ def FFT_for_Period(x, k=2):
 class TimesBlock(nn.Module):
     def __init__(self, configs):
         super(TimesBlock, self).__init__()
-        self.seq_len = configs.seq_len
         self.pred_len = configs.pred_len
         self.k = configs.top_k
         # parameter-efficient design
         # d_ff是卷积层的中间变量，因为使用了一个d_model->d_ff->d_model的变化
         # num_kernels默认是6
         self.conv = nn.Sequential(
-            Inception_Block_V1(configs.d_model, configs.d_ff,
+            Inception_Block_V3(configs.d_model, configs.d_ff,
                                num_kernels=configs.num_kernels),
             nn.GELU(),
-            Inception_Block_V1(configs.d_ff, configs.d_model,
+            Inception_Block_V3(configs.d_ff, configs.d_model,
                                num_kernels=configs.num_kernels)
         )
 
     def forward(self, x):
+        seq_len = x.shape[1]
         # 这里的T对于forecast来说是seq_len+pred,对于其他任务来说就只是seq
         B, T, N = x.size()
         #period_list [k],period_wieght:[batch_size,k]
@@ -66,14 +66,14 @@ class TimesBlock(nn.Module):
             period = period_list[i]
             # padding
             # out这里就是补出来0之后的
-            if (self.seq_len + self.pred_len) % period != 0:
+            if (seq_len + self.pred_len) % period != 0:
                 # length是周期整除之后的数值，相当于是整除后加一，给额外补了一截0为了凑周期
-                length = (((self.seq_len + self.pred_len) // period) + 1) * period
-                padding = torch.zeros([x.shape[0], (length - (self.seq_len + self.pred_len)), x.shape[2]]).to(x.device)
+                length = (((seq_len + self.pred_len) // period) + 1) * period
+                padding = torch.zeros([x.shape[0], (length - (seq_len + self.pred_len)), x.shape[2]]).to(x.device)
                 out = torch.cat([x, padding], dim=1)
             else:
                 # 刚好被周期整除时候
-                length = (self.seq_len + self.pred_len)
+                length = (seq_len + self.pred_len)
                 out = x
             # reshape
             # length//period得出的是一共被切成几段，这个维度上面代表的是inter-period
@@ -85,7 +85,7 @@ class TimesBlock(nn.Module):
             # reshape back，还原回去了[batch_size,padded_len,d_model]
             out = out.permute(0, 2, 3, 1).reshape(B, -1, N)
             # 把padding 部分给去掉了
-            res.append(out[:, :(self.seq_len + self.pred_len), :])
+            res.append(out[:, :(seq_len + self.pred_len), :])
         # res [batch_size,seq_len+pred_len,d_model,k]
         res = torch.stack(res, dim=-1)
         # adaptive aggregation
@@ -110,8 +110,6 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.configs = configs
         self.task_name = configs.task_name
-        self.seq_len = configs.seq_len
-        self.label_len = configs.label_len
         self.pred_len = configs.pred_len
         # e_layer这里是2，注意这里是用for的写法，所以time_block不是共享的参数
         self.model = nn.ModuleList([TimesBlock(configs)
@@ -121,21 +119,7 @@ class Model(nn.Module):
                                            configs.dropout)
         self.layer = configs.e_layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
-        if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
-            # 只有预测任务有predict_linear，这里相当于是不使用encoder-decoder structure就能实现生成式模型
-            self.predict_linear = nn.Linear(self.seq_len, self.pred_len + self.seq_len)
-            # bias这个bool量决定是否引入偏置项
-            # projection是最后的输出层了
-            self.projection = nn.Linear(
-                configs.d_model, configs.c_out, bias=True)
-        if self.task_name == 'imputation' or self.task_name == 'anomaly_detection':
-            self.projection = nn.Linear(
-                configs.d_model, configs.c_out, bias=True)
-        if self.task_name == 'classification':
-            self.act = F.gelu
-            self.dropout = nn.Dropout(configs.dropout)
-            self.projection = nn.Linear(
-                configs.d_model * configs.seq_len, configs.num_class)
+
 
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
@@ -178,58 +162,7 @@ class Model(nn.Module):
                           1, self.pred_len + self.seq_len, 1))
             return dec_out
 
-    def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):
-        # Normalization from Non-stationary Transformer
-        means = torch.sum(x_enc, dim=1) / torch.sum(mask == 1, dim=1)
-        means = means.unsqueeze(1).detach()
-        x_enc = x_enc - means
-        x_enc = x_enc.masked_fill(mask == 0, 0)
-        stdev = torch.sqrt(torch.sum(x_enc * x_enc, dim=1) /
-                           torch.sum(mask == 1, dim=1) + 1e-5)
-        stdev = stdev.unsqueeze(1).detach()
-        x_enc /= stdev
 
-        # embedding
-        enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
-        # TimesNet
-        for i in range(self.layer):
-            enc_out = self.layer_norm(self.model[i](enc_out))
-        # porject back
-        dec_out = self.projection(enc_out)
-
-        # De-Normalization from Non-stationary Transformer
-        dec_out = dec_out * \
-                  (stdev[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        dec_out = dec_out + \
-                  (means[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        return dec_out
-
-    def anomaly_detection(self, x_enc):
-        # Normalization from Non-stationary Transformer
-        means = x_enc.mean(1, keepdim=True).detach()
-        x_enc = x_enc - means
-        stdev = torch.sqrt(
-            torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
-        x_enc /= stdev
-
-        # embedding
-        enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]
-        # TimesNet
-        for i in range(self.layer):
-            enc_out = self.layer_norm(self.model[i](enc_out))
-        # porject back
-        dec_out = self.projection(enc_out)
-
-        # De-Normalization from Non-stationary Transformer
-        dec_out = dec_out * \
-                  (stdev[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        dec_out = dec_out + \
-                  (means[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
-        return dec_out
 
     def classification(self, x_enc, x_mark_enc):
         # embedding
@@ -256,7 +189,7 @@ class Model(nn.Module):
         for i in range(self.layer):
             enc_out = self.layer_norm(self.model[i](enc_out))
         output = enc_out * x_mark_enc.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], self.seq_len, -1)
+        output = output.reshape(output.shape[0], x_enc.shape[1], -1)
         return output
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
