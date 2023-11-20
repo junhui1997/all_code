@@ -1,10 +1,15 @@
 cd ..
-python -u tcn_main.py --split 1 --save_name hhh --task_name su
-python -u tcn_main.py --split 2 --save_name hhh --task_name su
-python -u tcn_main.py --split 3 --save_name hhh --task_name su
-python -u tcn_main.py --split 4 --save_name hhh --task_name su
-python -u tcn_main.py --split 5 --save_name hhh --task_name su
-python -u tcn_main.py --split 6 --save_name hhh --task_name su
-python -u tcn_main.py --split 7 --save_name hhh --task_name su
-python -u tcn_main.py --split 8 --save_name hhh --task_name su
+for e_layers in 2 3 4
+do
+for top_k in 2 4 6 8 16
+do
+  for d_model in 16 32 64 128 256
+do
+  for factor in 1
+do
+  python -u tcn_main.py --split 8 --save_name hhh --task_name su --e_layers $e_layers  --factor $factor  --d_model $d_model --d_ff 128  --top_k $top_k
+done
+done
+done
+done
 ###

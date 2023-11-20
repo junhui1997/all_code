@@ -8,7 +8,7 @@ import torch.nn as nn
 from random import randrange
 from tcn_model import TcnGcnNet
 from my_dataset import RawFeatureDataset
-from config import args
+from config import args,setting
 import copy
 
 from logger import Logger
@@ -329,6 +329,12 @@ def cross_validate(model_params, train_params, naming):
         print('F50: ', f_scores[2])
         print('F75: ', f_scores[3])
 
+        f = open("jigsaw_output.txt", 'a')
+        f.write(setting + "  \n")
+        f.write('acc{}_edit{}_f10{}_f25{}_f50{}_f75{}'.format(acc, edit, f_scores[0], f_scores[1], f_scores[2], f_scores[3]))
+        f.write('\n')
+        f.write('\n')
+        f.close()
     result = np.array(result)
 
     return result

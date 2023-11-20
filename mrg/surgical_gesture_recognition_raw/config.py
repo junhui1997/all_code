@@ -73,6 +73,7 @@ parser.add_argument('--embed', type=str, default='none', help='time features enc
 parser.add_argument('--dropout', type=float, default=0.01, help='dropout')
 parser.add_argument('--activation', type=str, default='gelu', help='activation')
 parser.add_argument('--c_out', type=int, default=12, help='当做encoder使用时候是不是需要等于啥，存疑')
+parser.add_argument('--moving_avg', type=int, default=50, help='window size of moving average')
 # for time net
 parser.add_argument('--num_kernels', type=int, default=6, help='for Inception')
 # useless
@@ -81,6 +82,8 @@ parser.add_argument('--dec_in', type=int, default=7, help='useless')
 parser.add_argument('--freq', type=str, default='h', help='useless')
 parser.add_argument('--output_attention', action='store_true', help='useless')
 parser.add_argument('--distil', action='store_false', help='useless',default=True)
+# for model build
+parser.add_argument('--fusion_type', type=str,  default='3')
 # parser.add_argument('--c_out', type=int, default=12, help='output size') # MICN is affected by this # cout 存疑
 # --seq_len 20 --label_len 20 --pred_len 0 --e_layers 1 --d_layers 1 --factor 2 --enc_in 4 --dec_in 2 --c_out 2 --d_model 16 --d_ff 16 --des 'Exp' --itr 1 --top_k 2 --model Informer
 args = parser.parse_args()
@@ -93,3 +96,14 @@ elif args.sur_task_name == 'kt':
 elif args.sur_task_name == 'np':
     args.num_classes = 8
     gesture_class_num = 8
+
+setting = '{}_{}_dm{}_nh{}_el{}_df{}_fc{}_ma{}'.format(
+            args.sur_task_name,
+            args.split,
+            args.d_model,
+            args.n_heads,
+            args.e_layers,
+            args.d_ff,
+            args.factor,
+            args.moving_avg,
+            )

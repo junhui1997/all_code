@@ -420,8 +420,8 @@ class TcnGcnNet(nn.Module):
         x_right = (x_right_t + x_right_l) / 2
         # 最终需要使用的结果是x_left,x_right,x_vision:每一个都是[batch_size,video_len,64]
 
-        x_fu = x_left + x_right + x_vision
-
+        x_fu = x_left + x_right + x_vision #使用这个时候修改enc_in 为64
+        # x_fu = torch.cat((x_left, x_right, x_vision), dim=-1)  #使用这个时候修改enc_in 为 192
         out = self.encoder_all(x_fu)
         out = self.new_fc(out)
 
