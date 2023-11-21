@@ -53,7 +53,7 @@ parser.add_argument('--anomaly_ratio', type=float, default=0.25, help='prior ano
 # model define
 parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
 parser.add_argument('--num_kernels', type=int, default=6, help='for Inception')
-parser.add_argument('--enc_in', type=int, default=7, help='encoder input size')
+parser.add_argument('--enc_in', type=int, default=64, help='encoder input size')
 parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')
 parser.add_argument('--c_out', type=int, default=12, help='output size') # MICN is affected by this
 parser.add_argument('--d_model', type=int, default=512, help='dimension of model')

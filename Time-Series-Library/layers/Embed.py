@@ -172,7 +172,8 @@ class PatchEmbedding(nn.Module):
         super(PatchEmbedding, self).__init__()
         # Patching
         self.patch_len = patch_len
-        self.stride = stride
+        self.stride = stride  # default stride:8
+        # 左边填充0，邮编填充padding
         self.padding_patch_layer = nn.ReplicationPad1d((0, padding))
 
         # Backbone, Input encoding: projection of feature vectors onto a d-dim vector space
@@ -187,9 +188,10 @@ class PatchEmbedding(nn.Module):
     def forward(self, x):
         # do patching
         n_vars = x.shape[1]
-        x = self.padding_patch_layer(x)
+        x = self.padding_patch_layer(x)  # x [batch_size,enc_in,seq_len+stride)
+        # [ batch_size, enc_in, N,patch_len] 进行滑动窗口操作,N是论文中计算出来的，参考卷积计算公式，注意卷积计算公式里面的p是两边加一起来一共增加了多少，nn。conv里面是一边增加多少
         x = x.unfold(dimension=-1, size=self.patch_len, step=self.stride)
-        x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
+        x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))   # 相当于以batch_size*enc_in取代了原有的batch,实现了channel independent， 然后以patch_len替代了原本的seq_len
         # Input encoding
         x = self.value_embedding(x) + self.position_embedding(x)
         return self.dropout(x), n_vars

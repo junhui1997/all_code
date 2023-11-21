@@ -10,7 +10,7 @@ class FlattenHead(nn.Module):
     def __init__(self, n_vars, nf, target_window, head_dropout=0):
         super().__init__()
         self.n_vars = n_vars
-        self.flatten = nn.Flatten(start_dim=-2)
+        self.flatten = nn.Flatten(start_dim=-2)   # flatten和view区别不大
         self.linear = nn.Linear(nf, target_window)
         self.dropout = nn.Dropout(head_dropout)
 
@@ -37,7 +37,7 @@ class Model(nn.Module):
         self.pred_len = configs.pred_len
         padding = stride
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
-                                           configs.dropout)
+                                           configs.dropout)  # add by me for output d_model
         # patching and embedding
         self.patch_embedding = PatchEmbedding(
             configs.d_model, patch_len, stride, padding, configs.dropout)
@@ -74,6 +74,7 @@ class Model(nn.Module):
                 self.head_nf * configs.enc_in, configs.num_class)
 
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
+        # 这一部分就是instance norm
         # Normalization from Non-stationary Transformer
         means = x_enc.mean(1, keepdim=True).detach()
         x_enc = x_enc - means
@@ -81,7 +82,8 @@ class Model(nn.Module):
             torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
         x_enc /= stdev
 
-        # do patching and embedding
+        # do patching and embedding # patchify 是沿着seq_len 方向上做得
+        # n_var = enc_in
         x_enc = x_enc.permute(0, 2, 1)
         # u: [bs * nvars x patch_num x d_model]
         enc_out, n_vars = self.patch_embedding(x_enc)
@@ -96,7 +98,8 @@ class Model(nn.Module):
         enc_out = enc_out.permute(0, 1, 3, 2)
 
         # Decoder
-        dec_out = self.head(enc_out)  # z: [bs x nvars x target_window]
+        # 将 d_model x patch_num -> pred_len
+        dec_out = self.head(enc_out)  # z: [bs x nvars x pred_len]
         dec_out = dec_out.permute(0, 2, 1)
 
         # De-Normalization from Non-stationary Transformer
