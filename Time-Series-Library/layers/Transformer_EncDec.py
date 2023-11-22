@@ -45,6 +45,7 @@ class EncoderLayer(nn.Module):
         x = x + self.dropout(new_x)
 
         y = x = self.norm1(x)
+        # 两层norm间是feed forward
         y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
         y = self.dropout(self.conv2(y).transpose(-1, 1))
 

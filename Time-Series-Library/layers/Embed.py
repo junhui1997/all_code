@@ -42,6 +42,27 @@ class TokenEmbedding(nn.Module):
         return x
 
 
+class DataEmbedding_inverted(nn.Module):
+    '''
+    [batch_size,seq_len,enc_in]->[batch_size,enc_in,seq_len]->[batch_size,enc_in,d_model]
+    注意这里的c_in=seq_len
+    '''
+    def __init__(self, c_in, d_model, embed_type='fixed', freq='h', dropout=0.1):
+        super(DataEmbedding_inverted, self).__init__()
+        self.value_embedding = nn.Linear(c_in, d_model)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, x, x_mark):
+        x = x.permute(0, 2, 1)
+        # x: [Batch Variate Time]
+        if x_mark is None:
+            x = self.value_embedding(x)
+        else:
+            x = self.value_embedding(torch.cat([x, x_mark.permute(0, 2, 1)], 1))
+        # x: [Batch Variate d_model]
+        return self.dropout(x)
+
+
 class FixedEmbedding(nn.Module):
     def __init__(self, c_in, d_model):
         super(FixedEmbedding, self).__init__()
@@ -105,6 +126,7 @@ class TimeFeatureEmbedding(nn.Module):
     def forward(self, x):
         return self.embed(x)
 
+
 class NoTimeEmbedding(nn.Module):
     def __init__(self, d_model):
         super(NoTimeEmbedding, self).__init__()
@@ -115,6 +137,8 @@ class NoTimeEmbedding(nn.Module):
         # 这里因为不是葱x继承过来的，所以需要cuda
         zero = torch.zeros(batch_size, seq_len, self.d_model).cuda()
         return zero
+
+
 class DataEmbedding(nn.Module):
     def __init__(self, c_in, d_model, embed_type='fixed', freq='h', dropout=0.1):
         super(DataEmbedding, self).__init__()
@@ -191,7 +215,7 @@ class PatchEmbedding(nn.Module):
         x = self.padding_patch_layer(x)  # x [batch_size,enc_in,seq_len+stride)
         # [ batch_size, enc_in, N,patch_len] 进行滑动窗口操作,N是论文中计算出来的，参考卷积计算公式，注意卷积计算公式里面的p是两边加一起来一共增加了多少，nn。conv里面是一边增加多少
         x = x.unfold(dimension=-1, size=self.patch_len, step=self.stride)
-        x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))   # 相当于以batch_size*enc_in取代了原有的batch,实现了channel independent， 然后以patch_len替代了原本的seq_len
+        x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))  # 相当于以batch_size*enc_in取代了原有的batch,实现了channel independent， 然后以patch_len替代了原本的seq_len
         # Input encoding
         x = self.value_embedding(x) + self.position_embedding(x)
         return self.dropout(x), n_vars
